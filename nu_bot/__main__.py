@@ -6,11 +6,8 @@ from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyb
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler
 
 from nu_bot.modules.sql.base import Session, engine
-from nu_bot.modules.sql import base as db
+import nu_bot.modules.sql.base as db
 from nu_bot.modules import private, products
-
-# env
-TOKEN=config('TOKEN')
 
 def add_all_handlers(application):
     # handlers
@@ -30,9 +27,8 @@ def add_all_handlers(application):
     application.add_handler(private.handler_private_default)
 
 def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-    add_all_handlers(application)
     application.run_polling()
+    add_all_handlers(application)
 
 if __name__ == '__main__':
     db.create_tables()
