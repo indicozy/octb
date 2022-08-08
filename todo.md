@@ -1,1 +1,2 @@
 - Verification by email
+- Rewrite sql methods
