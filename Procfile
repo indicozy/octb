@@ -1,1 +1,1 @@
-web: python3 -m nu_bot
+web: python3 -m octb

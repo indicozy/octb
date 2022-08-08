@@ -1,9 +1,12 @@
+from decouple import config
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler, CallbackQueryHandler
-from decouple import config
+
 from nu_bot.modules.sql import base as db
 from nu_bot import LOGGER
 from nu_bot.modules.helpers.base import generate_post
+
+from tg_bot import application
 
 # storage
 import os
@@ -297,3 +300,6 @@ edit_handler = ConversationHandler(
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+
+application.add_handler(add_product)
+application.add_handler(edit_handler)
