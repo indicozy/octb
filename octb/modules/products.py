@@ -2,11 +2,11 @@ from decouple import config
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler, CallbackQueryHandler
 
-from nu_bot.modules.sql import base as db
-from nu_bot import LOGGER
-from nu_bot.modules.helpers.base import generate_post
+import octb.modules.sql
+from octb import LOGGER
+from octb.modules.helpers.base import generate_post
 
-from tg_bot import application
+from octb import application
 
 # storage
 import os
@@ -105,7 +105,7 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     product_preps[user.id]['photo_location'] = storage_location
 
-    categories = db.get_all_categories()
+    categories = sql.category.get_all_categories()
     text = "\n".join([f"{index + 1}. {category}" for category, index in zip(categories, range(len(categories)))])
 
     await update.message.reply_text(text)
@@ -165,7 +165,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                                                      text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                                                            product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
 
-        product_new_id = db.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+        product_new_id = sql.product.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
                        seller_tg_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
 
         await update.message.reply_text("Продукт добавлен!")
@@ -210,7 +210,7 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user_text = update.message.text
     LOGGER.info("text of %s: %s", user.first_name, update.message.text)
 
-    items = db.get_products_from_tg_user(user.id)
+    items = sql.product.get_products_from_tg_user(user.id)
 
     menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(item.name[:20], callback_data=str(item.id)) for item, index in zip(items, range(len(items)))])) 
 
@@ -226,7 +226,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     text = query.data
     LOGGER.info("callback of %s: %s", user.id, text)
 
-    item = db.get_product_by_id(text, user.id) # TODO add verification of callback
+    item = sql.product.get_product_by_id(text, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -301,5 +301,5 @@ edit_handler = ConversationHandler(
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-application.add_handler(add_product)
-application.add_handler(edit_handler)
+application.add_handlers([add_product,
+                           edit_handler])

@@ -14,8 +14,7 @@ import importlib
 
 IMPORTED = {}
 
-# for module_name in ALL_MODULES:
-for module_name in ['start']:
+for module_name in ALL_MODULES:
     imported_module = importlib.import_module("octb.modules." + module_name)
     if not hasattr(imported_module, "__mod_name__"):
         imported_module.__mod_name__ = imported_module.__name__

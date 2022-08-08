@@ -15,7 +15,7 @@ async def start(update: Update, context:ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!", reply_markup=buttons.BASE_BUTTONS)
 
 async def default_reply(update: Update, context:ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Повторите ваш запрос.")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Повторите ваш запрос.", reply_markup=buttons.BASE_BUTTONS)
 
 # handlers
 startHandler = CommandHandler('start', start)
