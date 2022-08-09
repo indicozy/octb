@@ -15,6 +15,9 @@ import os
 # TODO add redis
 product_preps = {}
 
+from decouple import config
+MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')
+
 # env
 STORAGE=config('STORAGE')
 MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')
@@ -108,7 +111,6 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     categories = category_sql.get_all_categories()
     text = "\n".join([f"{index + 1}. {category}" for category, index in zip(categories, range(len(categories)))])
-    print(text)
 
     await update.message.reply_text(text)
 
@@ -156,6 +158,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
 
     elif user_text in ['y', 'Y', 'Да', 'да']:
+
+
         storage_folder = f'{STORAGE}/photos/product/'
 
         if product_preps[user.id]['photo_location']:
@@ -167,13 +171,20 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                                                      text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                                                            product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
 
-        product_new_id = product_sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+        product_new = product_sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
                        seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
+                       
+        menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
+
+        message_edited = await context.bot.edit_message_text(chat_id=MARKETPLACE_CHAT_ID, message_id = message.id,
+                                                     text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
+                                                                           product_preps[user.id]['is_selling'], product_preps[user.id]['category']),
+                                                     reply_markup=menu)
 
         await update.message.reply_text("Продукт добавлен!")
 
         if product_preps[user.id]['photo_location']:
-            os.rename(product_preps[user.id]['photo_location'], f'{storage_folder}{product_new_id}.jpg')
+            os.rename(product_preps[user.id]['photo_location'], f'{storage_folder}{product_new.id}.jpg')
             photo_location = storage_folder
 
         product_preps.pop(user.id) # TODO try except
@@ -210,9 +221,8 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     if update.callback_query:
         query = update.callback_query
-        await query.answer()
 
-        user = query.message.chat
+        user = update.callback_query.from_user
         text = query.data
     else:
         user = update.message.from_user
@@ -220,8 +230,8 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
     LOGGER.info("text of %s: %s", user.first_name, text)
 
-    items = product_sql.get_products_from_tg_user(user.id)
-    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(item.name[:20], callback_data=str(item.id)) for item, index in zip(items, range(len(items)))])) 
+    items = product_sql.get_active_products_from_tg_user(user.id)
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(item.name[:20], callback_data="PRODUCT_MENU_" + str(item.id)) for item, index in zip(items, range(len(items)))])) 
 
 
     if update.callback_query:
@@ -236,24 +246,28 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
     query = update.callback_query
-    await query.answer()
 
-    user = query.message.chat
+    user = update.callback_query.from_user
     text = query.data
+    product_id = text.replace("PRODUCT_MENU_", "")
     LOGGER.info("callback of %s: %s", user.id, text)
 
-    item = product_sql.get_product_by_id(text, user.id) # TODO add verification of callback
+    item = product_sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
+
+    restore_or_sold = InlineKeyboardButton("Закрыть Объявление", callback_data=f"SELL_{product_id}")
+    if item.is_sold:
+        restore_or_sold = InlineKeyboardButton("Восстановить Объявление", callback_data=f"RESTORE_{product_id}") 
 
     menu = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("Удалить Пост", callback_data=f"ARCHIVE-{text}"),
+                InlineKeyboardButton("Удалить Объявление", callback_data=f"ARCHIVE_{product_id}"),
             ],
             [
-                InlineKeyboardButton("Объявление Продано", callback_data=f"SOLD-{text}"),
+                restore_or_sold,
             ],
             [
-                InlineKeyboardButton("< Назад", callback_data="BACK"),
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
             ]
         ]
     ) 
@@ -262,13 +276,157 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), category_sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
     return ConversationHandler.END
 
+async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    product_id = text.replace("ARCHIVE_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+
+    item = product_sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("Удалить", callback_data=f"ARCHIVE_CONFIRMED_{product_id}"),
+            ],
+            [
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
+            ]
+        ]
+    ) 
+
+    await query.edit_message_text(
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), category_sql.get_category_by_id(item.category_id).name]) + \
+            "ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ? ПОСЛЕ УДАЛЕНИЯ ОБЪЯВЛЕНИЕ НЕЛЬЗЯ ВОССТАНОВИТЬ"
+        , reply_markup=menu)
+    return ConversationHandler.END
+
+async def item_archive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    product_id = text.replace("ARCHIVE_CONFIRMED_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+    LOGGER.info(product_id)
+
+    item_archived = product_sql.archive_product(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
+            ]
+        ]
+    ) 
+
+    post_deleted = False
+    try:
+        await context.bot.delete_message(chat_id=MARKETPLACE_CHAT_ID, # TODO add edit message first before deletion https://t.me/pythontelegrambotgroup/616535
+                message_id=item_archived.message_id)
+        post_deleted = True
+    except:
+        pass
+
+    reply_text = "Не удалось удалить пост, но теперь никто не будет вам писать."
+    if post_deleted:
+        reply_text = "Пост удален."
+    
+
+    await query.edit_message_text(reply_text, reply_markup=menu)
+    return ConversationHandler.END
+
+async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data # TODO fix
+    product_id = text.replace("BUY_PRODUCT_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+    LOGGER.info(product_id)
+
+    item = product_sql.get_product_by_id_no_verify(product_id) # TODO add verification of callback
+    print(item.is_archived, item.is_sold)
+    print(item)
+
+    if item.is_archived or item.is_sold:
+        await query.answer(text='Продукт уже куплен или удален.', show_alert=True)
+        return
+
+    await query.answer(text='Мы написали продавцу, ожидайте от него/нее сообщения.', show_alert=True)
+
+    item_bought = product_sql.set_buyer(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("Контакты", url=f"tg://user?id={user.id}"),
+            ]
+        ]
+    ) 
+
+    await context.bot.send_message(chat_id=item_bought.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item_bought.name, item_bought.description, []), reply_markup=menu)
+
+async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    product_id = text.replace("SELL_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+    LOGGER.info(product_id)
+
+    item_sold = product_sql.product_sold(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
+            ]
+        ]
+    ) 
+
+    reply_text = "Объявление закрыто. Вы больше не будете получать заявки."
+
+    await query.edit_message_text(reply_text, reply_markup=menu)
+
+async def item_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    product_id = text.replace("RESTORE_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+    LOGGER.info(product_id)
+
+    item_restored = product_sql.product_restore(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
+            ]
+        ]
+    ) 
+
+    reply_text = "Объявление восстановлено. Вы снова будете получать заявки."
+
+    await query.edit_message_text(reply_text, reply_markup=menu)
+
 PRODUCT_TYPE, NAME, DESCRIPTION, IMAGE, CATEGORY, CONFIRMATION = range(6)
 
 # main
 add_product = ConversationHandler(
     entry_points=[
             MessageHandler(filters.TEXT & filters.Regex('Купить/Продать') & filters.ChatType.PRIVATE, new_product),
-            CommandHandler("new_item", new_product),
+            CommandHandler("new_item", new_product, filters=filters.ChatType.PRIVATE),
         ],
     states={
         PRODUCT_TYPE: [MessageHandler(~filters.COMMAND & filters.TEXT, product_type)],
@@ -293,29 +451,28 @@ add_product = ConversationHandler(
 
 ITEM_MENU, ITEM_ARCHIVE, ITEM_MENU_ACTIONS, ITEM_BACK = range(4)
 
-edit_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler("my_items", item_menu_select),
-            MessageHandler(filters.Regex('^Мои Объявления$'), item_menu_select),
-            ],
-        states={
-            ITEM_MENU: [
-                CallbackQueryHandler(item_menu_get_id),
-            ],
-            ITEM_MENU_ACTIONS: [
-                CallbackQueryHandler(item_archive),
-                CallbackQueryHandler(item_sold),
-                CallbackQueryHandler(item_menu_select),
-            ],
-            # ITEM_ARCHIVE: [
-            #     CallbackQueryHandler(item_menu_archive, pattern="^" + str(ITEM_ARCHIVE) + "$"),
-            # ],
-            # ITEM_SOLD: [
-            #     CallbackQueryHandler(item_menu_edit, pattern="^" + str(ITEM_MENU_EDIT_MENU) + "$"),
-            # ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
+edit_start_1 = CommandHandler("my_items", item_menu_select)
+edit_start_2 = MessageHandler(filters.Regex('^Мои Объявления$'), item_menu_select)
+edit_start_3 = CallbackQueryHandler(item_menu_select, pattern="^" + "PRODUCT_START" + "$")
+edit_item_menu = CallbackQueryHandler(item_menu_get_id, pattern="^" + "PRODUCT_MENU_")
+edit_item_archive_confirm = CallbackQueryHandler(item_archive_confirmation, pattern="^" + "ARCHIVE_")
+edit_item_has_sold  = CallbackQueryHandler(item_sell, pattern="^" + "SELL_")
+edit_item_has_restored  = CallbackQueryHandler(item_restore, pattern="^" + "RESTORE_")
 
-application.add_handlers([add_product,
-                           edit_handler])
+edit_item_has_archived = CallbackQueryHandler(item_archive, pattern="^" + "ARCHIVE_CONFIRMED_")
+# edit_item_has_sold = CallbackQueryHandler(item_archive)
+
+product_inform_seller = CallbackQueryHandler(inform_seller, pattern="^" + "BUY_PRODUCT_")
+
+edit_handlers = [
+    edit_start_1,
+    edit_start_2,
+    edit_start_3,
+    edit_item_menu,
+    edit_item_has_archived,
+    edit_item_archive_confirm,
+    edit_item_has_sold,
+    edit_item_has_restored,
+]
+
+application.add_handlers([add_product, product_inform_seller] + edit_handlers)

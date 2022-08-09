@@ -51,11 +51,64 @@ def add_product(message_id, is_selling, name, description, seller_id, category_n
         SESSION.add(product)
         SESSION.flush()
         SESSION.commit()
+    return product
+
+def set_buyer(product_id, buyer_id):
+    with INSERTION_LOCK:
+        product = SESSION.query(Product)\
+          .where(Product.id == product_id)\
+          .first() # TODO try except
+        product.buyer_id = buyer_id
+        SESSION.add(product)
+        SESSION.commit()
+        return product
+
+def archive_product(product_id, user_id):
+    with INSERTION_LOCK:
+        product = SESSION.query(Product)\
+          .where(Product.id == product_id)\
+          .where(Product.seller_id == user_id)\
+          .first() # TODO try except
+        product.is_archived = True
+        SESSION.add(product)
+        SESSION.commit()
+        return product
+
+def product_sold(product_id, user_id):
+    with INSERTION_LOCK:
+        product = SESSION.query(Product)\
+          .where(Product.id == product_id)\
+          .where(Product.seller_id == user_id)\
+          .first() # TODO try except
+        product.is_sold = True
+        SESSION.add(product)
+        SESSION.commit()
+        return product
+
+def product_restore(product_id, user_id):
+    with INSERTION_LOCK:
+        product = SESSION.query(Product)\
+          .where(Product.id == product_id)\
+          .where(Product.seller_id == user_id)\
+          .first() # TODO try except
+        product.is_sold = False
+        SESSION.add(product)
+        SESSION.commit()
+        return product
 
 def get_products_from_tg_user(tg_id):
     try:
         return SESSION.query(Product)\
           .where(Product.seller_id == tg_id)\
+          .all()
+    finally:
+        SESSION.close()
+
+def get_active_products_from_tg_user(tg_id):
+    try:
+        return SESSION.query(Product)\
+          .where(Product.seller_id == tg_id)\
+          .where(Product.is_archived == False)\
           .all()
     finally:
         SESSION.close()
@@ -66,7 +119,15 @@ def get_product_by_id(product_id, tg_id, seller=True):
     if seller==True:
       query = query.where(Product.seller_id == tg_id)
     else:
-      query = query.where(Product.buyer == tg_id)
+      query = query.where(Product.buyer_id == tg_id)
+    try:
+        return query.first()
+    finally:
+      SESSION.close()
+
+def get_product_by_id_no_verify(product_id):
+    query = SESSION.query(Product)\
+            .where(Product.id == product_id)
     try:
         return query.first()
     finally:

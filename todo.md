@@ -1,2 +1,3 @@
 - Verification by email
-- Rewrite sql methods
+- Callback from Купить must show that message is sent or item is bought
+- set user id to string

@@ -12,12 +12,18 @@ async def start(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     sql.update_user(user.id, user.username)
     await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!", reply_markup=buttons.BASE_BUTTONS)
+    await context.bot.send_message(chat_id=1947338404, text="tessdwewqt", reply_markup=buttons.BASE_BUTTONS)
+
+async def show_id(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=str(user.id), reply_markup=buttons.BASE_BUTTONS)
 
 async def default_reply(update: Update, context:ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Повторите ваш запрос.", reply_markup=buttons.BASE_BUTTONS)
 
 # handlers
-startHandler = CommandHandler('start', start)
+startHandler = CommandHandler('start', start, filters=filters.ChatType.PRIVATE)
+show_id_handler = CommandHandler('id', show_id, filters=filters.ChatType.PRIVATE)
 private_default = MessageHandler(filters.ALL & filters.ChatType.PRIVATE, default_reply)
 
-application.add_handlers([startHandler, private_default])
+application.add_handlers([startHandler,show_id_handler, private_default])
