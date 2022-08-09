@@ -7,7 +7,6 @@ import octb.modules.sql.user as sql
 from octb import application
 
 __mod_name__ = "start"
-print("here")
 
 async def start(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user

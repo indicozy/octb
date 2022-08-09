@@ -2,9 +2,10 @@ from decouple import config
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler, CallbackQueryHandler
 
-import octb.modules.sql
+import octb.modules.sql.product as product_sql
+import octb.modules.sql.category as category_sql
 from octb import LOGGER
-from octb.modules.helpers.base import generate_post
+from octb.modules.helpers.base import generate_post, selling_map
 
 from octb import application
 
@@ -105,8 +106,9 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     product_preps[user.id]['photo_location'] = storage_location
 
-    categories = sql.category.get_all_categories()
+    categories = category_sql.get_all_categories()
     text = "\n".join([f"{index + 1}. {category}" for category, index in zip(categories, range(len(categories)))])
+    print(text)
 
     await update.message.reply_text(text)
 
@@ -165,8 +167,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                                                      text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                                                            product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
 
-        product_new_id = sql.product.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
-                       seller_tg_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
+        product_new_id = product_sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+                       seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
 
         await update.message.reply_text("Продукт добавлен!")
 
@@ -205,16 +207,30 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 menu_new[-1].append(i)
         return menu_new
 
-    """Stores the selected gender and asks for a photo."""
-    user = update.message.from_user
-    user_text = update.message.text
-    LOGGER.info("text of %s: %s", user.first_name, update.message.text)
 
-    items = sql.product.get_products_from_tg_user(user.id)
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
 
+        user = query.message.chat
+        text = query.data
+    else:
+        user = update.message.from_user
+        text = update.message.text
+        
+    LOGGER.info("text of %s: %s", user.first_name, text)
+
+    items = product_sql.get_products_from_tg_user(user.id)
     menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(item.name[:20], callback_data=str(item.id)) for item, index in zip(items, range(len(items)))])) 
 
-    await update.message.reply_text("Ваши Объявления:", reply_markup=menu)
+
+    if update.callback_query:
+        await query.edit_message_text(
+            "Ваши Объявления:", reply_markup=menu)
+    else:
+        await update.message.reply_text(
+            "Ваши Объявления:", reply_markup=menu)
+
     return ITEM_MENU
 
 async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -226,7 +242,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     text = query.data
     LOGGER.info("callback of %s: %s", user.id, text)
 
-    item = sql.product.get_product_by_id(text, user.id) # TODO add verification of callback
+    item = product_sql.get_product_by_id(text, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -243,8 +259,8 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[item.is_selling, item.category]), reply_markup=menu)
-    return ITEM_MENU_ACTIONS
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), category_sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
+    return ConversationHandler.END
 
 PRODUCT_TYPE, NAME, DESCRIPTION, IMAGE, CATEGORY, CONFIRMATION = range(6)
 
@@ -255,10 +271,10 @@ add_product = ConversationHandler(
             CommandHandler("new_item", new_product),
         ],
     states={
-        PRODUCT_TYPE: [MessageHandler(filters.TEXT, product_type)],
-        NAME: [MessageHandler(filters.TEXT, name)],
+        PRODUCT_TYPE: [MessageHandler(~filters.COMMAND & filters.TEXT, product_type)],
+        NAME: [MessageHandler(~filters.COMMAND & filters.TEXT, name)],
         DESCRIPTION: [
-            MessageHandler(filters.TEXT, description),
+            MessageHandler(~filters.COMMAND & filters.TEXT, description),
 
             MessageHandler(filters.Regex('^Пропустить$'), skip_description),
             CommandHandler("skip", skip_description),
@@ -269,8 +285,8 @@ add_product = ConversationHandler(
             MessageHandler(filters.Regex('^Пропустить$'), skip_image),
             CommandHandler("skip", skip_image),
         ],
-        CATEGORY: [MessageHandler(filters.TEXT, category)],
-        CONFIRMATION: [MessageHandler(filters.TEXT, confirmation)],
+        CATEGORY: [MessageHandler(~filters.COMMAND & filters.TEXT, category)],
+        CONFIRMATION: [MessageHandler(~filters.COMMAND & filters.TEXT, confirmation)],
     },
     fallbacks=[CommandHandler("cancel", cancel)],
 )
@@ -287,8 +303,8 @@ edit_handler = ConversationHandler(
                 CallbackQueryHandler(item_menu_get_id),
             ],
             ITEM_MENU_ACTIONS: [
-                # CallbackQueryHandler(item_archive),
-                # CallbackQueryHandler(item_sold),
+                CallbackQueryHandler(item_archive),
+                CallbackQueryHandler(item_sold),
                 CallbackQueryHandler(item_menu_select),
             ],
             # ITEM_ARCHIVE: [

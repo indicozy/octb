@@ -20,10 +20,22 @@ Category.__table__.create(checkfirst=True)
 INSERTION_LOCK = threading.RLock()
 
 def get_all_categories():
-    with Session().begin() as session:
-        stmt = select(Category)
-        categories = [category.name for category in session.scalars(stmt)]
-        return categories
+    try:
+        return SESSION.query(Category).all()
+    finally:
+        SESSION.close()
+
+def get_category_by_name(name):
+    try:
+        return SESSION.query(Category).where(Category.name == name).first()
+    finally:
+        SESSION.close()
+
+def get_category_by_id(category_id):
+    try:
+        return SESSION.query(Category).where(Category.id == category_id).first()
+    finally:
+        SESSION.close()
 
 def add_category(category_name):
     with INSERTION_LOCK:
@@ -32,6 +44,4 @@ def add_category(category_name):
             category = Category(category_name)
             SESSION.add(category)
             SESSION.flush()
-        else:
-            category.name = category_name
         SESSION.commit()
