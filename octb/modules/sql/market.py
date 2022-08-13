@@ -39,7 +39,6 @@ class Market_item(BASE):
 
       def __repr__(self):
           return "<User {} ({})>".format(self.id, self.name)
-          o
 Product.__table__.create(checkfirst=True)
 
 INSERTION_LOCK = threading.RLock()

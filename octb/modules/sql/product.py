@@ -81,7 +81,7 @@ class Product(BASE):
 
       def __repr__(self):
           return "<Product {} ({})>".format(self.id, self.name)
-          o
+
 Product.__table__.create(checkfirst=True)
 
 INSERTION_LOCK = threading.RLock()
