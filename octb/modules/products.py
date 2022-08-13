@@ -2,8 +2,7 @@ from decouple import config
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler, CallbackQueryHandler
 
-import octb.modules.sql.product as product_sql
-import octb.modules.sql.category as category_sql
+import octb.modules.sql.product as sql
 from octb import LOGGER
 from octb.modules.helpers.base import generate_post, selling_map
 
@@ -109,8 +108,8 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     product_preps[user.id]['photo_location'] = storage_location
 
-    categories = category_sql.get_all_categories()
-    text = "\n".join([f"{index + 1}. {category}" for category, index in zip(categories, range(len(categories)))])
+    categories = sql.get_all_categories()
+    text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
 
     await update.message.reply_text(text)
 
@@ -120,9 +119,10 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     product_preps[user.id]['photo_location'] = None
-    await update.message.reply_text(
-        "I bet you look great! Now, send me your category please, or send /skip."
-    )
+
+    categories = sql.get_all_categories()
+    text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
+    await update.message.reply_text(text)
 
     return CATEGORY
 
@@ -171,7 +171,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                                                      text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                                                            product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
 
-        product_new = product_sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+        product_new = sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
                        seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
                        
         menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
@@ -230,8 +230,8 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
     LOGGER.info("text of %s: %s", user.first_name, text)
 
-    items = product_sql.get_active_products_from_tg_user(user.id)
-    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(item.name[:20], callback_data="PRODUCT_MENU_" + str(item.id)) for item, index in zip(items, range(len(items)))])) 
+    items = sql.get_active_products_from_tg_user(user.id)
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{'🔒' if item.is_sold else ''}{item.name[:20]}", callback_data="PRODUCT_MENU_" + str(item.id)) for item, index in zip(items, range(len(items)))])) 
 
 
     if update.callback_query:
@@ -252,7 +252,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     product_id = text.replace("PRODUCT_MENU_", "")
     LOGGER.info("callback of %s: %s", user.id, text)
 
-    item = product_sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
+    item = sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
 
     restore_or_sold = InlineKeyboardButton("Закрыть Объявление", callback_data=f"SELL_{product_id}")
     if item.is_sold:
@@ -273,7 +273,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), category_sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
     return ConversationHandler.END
 
 async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -285,7 +285,7 @@ async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAUL
     product_id = text.replace("ARCHIVE_", "")
     LOGGER.info("callback of %s: %s", user.id, text)
 
-    item = product_sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
+    item = sql.get_product_by_id(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -299,7 +299,7 @@ async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAUL
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), category_sql.get_category_by_id(item.category_id).name]) + \
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), sql.get_category_by_id(item.category_id).name]) + \
             "ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ? ПОСЛЕ УДАЛЕНИЯ ОБЪЯВЛЕНИЕ НЕЛЬЗЯ ВОССТАНОВИТЬ"
         , reply_markup=menu)
     return ConversationHandler.END
@@ -314,7 +314,7 @@ async def item_archive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     LOGGER.info("callback of %s: %s", user.id, text)
     LOGGER.info(product_id)
 
-    item_archived = product_sql.archive_product(product_id, user.id) # TODO add verification of callback
+    item_archived = sql.archive_product(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -350,7 +350,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     LOGGER.info("callback of %s: %s", user.id, text)
     LOGGER.info(product_id)
 
-    item = product_sql.get_product_by_id_no_verify(product_id) # TODO add verification of callback
+    item = sql.get_product_by_id_no_verify(product_id) # TODO add verification of callback
     print(item.is_archived, item.is_sold)
     print(item)
 
@@ -360,7 +360,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     await query.answer(text='Мы написали продавцу, ожидайте от него/нее сообщения.', show_alert=True)
 
-    item_bought = product_sql.set_buyer(product_id, user.id) # TODO add verification of callback
+    item_bought = sql.set_buyer(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -382,7 +382,7 @@ async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     LOGGER.info("callback of %s: %s", user.id, text)
     LOGGER.info(product_id)
 
-    item_sold = product_sql.product_sold(product_id, user.id) # TODO add verification of callback
+    item_sold = sql.product_sold(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -406,7 +406,7 @@ async def item_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     LOGGER.info("callback of %s: %s", user.id, text)
     LOGGER.info(product_id)
 
-    item_restored = product_sql.product_restore(product_id, user.id) # TODO add verification of callback
+    item_restored = sql.product_restore(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [

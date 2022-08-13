@@ -1,4 +1,4 @@
-from octb.modules.sql.category import add_category
+from octb.modules.sql.product import add_category
 import yaml
 
 def generate_categories():

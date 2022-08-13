@@ -43,33 +43,7 @@ class Event(BASE):
       def __repr__(self):
           return "<Event {} ({})>".format(self.id, self.name)
 
-Event.__table__.create(checkfirst=True)
+# TODO create table after it's done
+# Event.__table__.create(checkfirst=True)
 
 INSERTION_LOCK = threading.RLock()
-
-# def get_all_events():
-#     try:
-#         return SESSION.query(Category).all()
-#     finally:
-#         SESSION.close()
-
-# def get_category_by_name(name):
-#     try:
-#         return SESSION.query(Category).where(Category.name == name).first()
-#     finally:
-#         SESSION.close()
-
-# def get_category_by_id(category_id):
-#     try:
-#         return SESSION.query(Category).where(Category.id == category_id).first()
-#     finally:
-#         SESSION.close()
-
-# def add_category(category_name):
-#     with INSERTION_LOCK:
-#         category = SESSION.query(Category).where(Category.name==category_name)
-#         if not category:
-#             category = Category(category_name)
-#             SESSION.add(category)
-#             SESSION.flush()
-#         SESSION.commit()
