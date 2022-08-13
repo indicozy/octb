@@ -35,6 +35,23 @@ class Market_product(BASE):
           return "<Market Item {} ({})>".format(self.id, self.name)
 Market_item.__table__.create(checkfirst=True)
 
+class Market_buyer(BASE):
+      __tablename__ = "market_buyer"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+
+      product_id = Column(Integer, ForeignKey("market_product.id"), nullable=False)
+      buyer_id = Column(Integer, nullable=False) # user.id
+
+      def __init__(self, product_id, buyer_id):
+        self.product_id = product_id 
+        self.buyer_id = buyer_id 
+
+      def __repr__(self):
+          return "<Market Buyer {} ({})>".format(self.id, self.buyer_id)
+
+Market_buyer.__table__.create(checkfirst=True)
+
 class Market_seller(BASE):
       __tablename__ = "market_seller"
 
