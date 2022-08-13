@@ -12,7 +12,6 @@ async def start(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     sql.update_user(user.id, user.username)
     await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!", reply_markup=buttons.BASE_BUTTONS)
-    await context.bot.send_message(chat_id=1947338404, text="tessdwewqt", reply_markup=buttons.BASE_BUTTONS)
 
 async def show_id(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
