@@ -170,8 +170,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             message = await context.bot.send_message(chat_id=MARKETPLACE_CHAT_ID,
                                                      text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                                                            product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
-
-        product_new = sql.add_product(message_id=message.id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+        product_new = sql.add_product(message_id=message.message_id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
                        seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
                        
         menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
@@ -360,7 +359,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     await query.answer(text='Мы написали продавцу, ожидайте от него/нее сообщения.', show_alert=True)
 
-    item_bought = sql.set_buyer(product_id, user.id) # TODO add verification of callback
+    item_bought = sql.add_buyer(product_id, user.id) # TODO add verification of callback
 
     menu = InlineKeyboardMarkup(
         [
@@ -370,7 +369,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         ]
     ) 
 
-    await context.bot.send_message(chat_id=item_bought.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item_bought.name, item_bought.description, []), reply_markup=menu)
+    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item.name, item.description, []), reply_markup=menu)
 
 async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""

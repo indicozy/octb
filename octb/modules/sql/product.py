@@ -5,6 +5,8 @@ from octb.modules.sql import BASE, SESSION
 
 from octb.modules.sql.user import User # needed for Foreignkey, do not delete
 
+INSERTION_LOCK = threading.RLock()
+
 class Category(BASE):
       __tablename__ = "category"
 
@@ -18,8 +20,6 @@ class Category(BASE):
           return "<User {} ({})>".format(self.id, self.name)
 
 Category.__table__.create(checkfirst=True)
-
-INSERTION_LOCK = threading.RLock()
 
 def get_all_categories():
     try:
@@ -41,8 +41,8 @@ def get_category_by_id(category_id):
 
 def add_category(category_name):
     with INSERTION_LOCK:
-        category = SESSION.query(Category).where(Category.name==category_name)
-        if not category:
+        category = SESSION.query(Category).where(Category.name==category_name).all()
+        if len(category) == 0:
             category = Category(category_name)
             SESSION.add(category)
             SESSION.flush()
@@ -63,8 +63,8 @@ class Product(BASE):
       is_sold = Column(Boolean, default=False)
 
       message_id = Column(Integer, nullable=False, unique=True)
-      seller_id = Column(Integer, ForeignKey("user.user_id"), nullable=False)
-      buyer_id = Column(Integer, ForeignKey("user.user_id"), nullable=True)
+
+      seller_id = Column(Integer, nullable=False)
       category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
 
       def __init__(self, name, has_image, description, seller_id, category_id, message_id, is_archived=False, is_selling=True, is_sold=False):
@@ -81,10 +81,35 @@ class Product(BASE):
 
       def __repr__(self):
           return "<Product {} ({})>".format(self.id, self.name)
-
 Product.__table__.create(checkfirst=True)
 
-INSERTION_LOCK = threading.RLock()
+class Product_buyer(BASE):
+      __tablename__ = "product_buyer"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+
+      product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
+      buyer_id = Column(Integer, nullable=False) # user.id
+
+      def __init__(self, product_id, buyer_id):
+        self.product_id = product_id 
+        self.buyer_id = buyer_id 
+
+      def __repr__(self):
+          return "<Product Buyer {} ({})>".format(self.id, self.buyer_id)
+
+Product_buyer.__table__.create(checkfirst=True)
+
+def add_buyer(product_id, buyer_id):
+    with INSERTION_LOCK:
+        product_buyer = SESSION.query(Product_buyer)\
+          .where(Product_buyer.buyer_id==buyer_id)\
+          .where(Product_buyer.product_id==product_id).all() # TODO change to new one https://stackoverflow.com/questions/41636169/how-to-use-postgresqls-insert-on-conflict-upsert-feature-with-flask-sqlal
+        if len(product_buyer) == 0:
+            product_buyer = Product_buyer(product_id, buyer_id)
+            SESSION.add(product_buyer)
+            SESSION.flush()
+        SESSION.commit()
 
 def add_product(message_id, is_selling, name, description, seller_id, category_name, has_image):
     category = SESSION.query(Category).where(Category.name == category_name).first() # TODO try except
@@ -94,16 +119,6 @@ def add_product(message_id, is_selling, name, description, seller_id, category_n
         SESSION.flush()
         SESSION.commit()
     return product
-
-def set_buyer(product_id, buyer_id):
-    with INSERTION_LOCK:
-        product = SESSION.query(Product)\
-          .where(Product.id == product_id)\
-          .first() # TODO try except
-        product.buyer_id = buyer_id
-        SESSION.add(product)
-        SESSION.commit()
-        return product
 
 def archive_product(product_id, user_id):
     with INSERTION_LOCK:
@@ -155,13 +170,10 @@ def get_active_products_from_tg_user(tg_id):
     finally:
         SESSION.close()
 
-def get_product_by_id(product_id, tg_id, seller=True):
+def get_product_by_id(product_id, tg_id):
     query = SESSION.query(Product)\
             .where(Product.id == product_id)
-    if seller==True:
-      query = query.where(Product.seller_id == tg_id)
-    else:
-      query = query.where(Product.buyer_id == tg_id)
+    query = query.where(Product.seller_id == tg_id)
     try:
         return query.first()
     finally:
