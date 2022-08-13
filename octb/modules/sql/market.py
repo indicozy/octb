@@ -43,6 +43,8 @@ class Market_buyer(BASE):
       product_id = Column(Integer, ForeignKey("market_product.id"), nullable=False)
       buyer_id = Column(Integer, nullable=False) # user.id
 
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+
       def __init__(self, product_id, buyer_id):
         self.product_id = product_id 
         self.buyer_id = buyer_id 
