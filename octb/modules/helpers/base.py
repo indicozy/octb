@@ -4,7 +4,7 @@ def selling_map(is_selling):
     return 'Куплю'
 
 def generate_post(headline, text, hashtags, args={}):
-    hashtags_text = " ".join([f'#{hashtag}' for hashtag in hashtags])
+    hashtags_text = " ".join([f'#{hashtag.lower()}' for hashtag in hashtags])
     args_text = "\n".join([f'{key}: {value}' for key, value in args.items()])
 
     print(headline, hashtags)

@@ -1,9 +1,10 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean, Enum
 from octb.modules.sql import BASE, SESSION
 
 from octb.modules.sql.user import User # needed for Foreignkey, do not delete
+import enum
 
 INSERTION_LOCK = threading.RLock()
 
@@ -47,27 +48,31 @@ def add_category(category_name):
             SESSION.add(category)
             SESSION.flush()
         SESSION.commit()
+        
+class ProductTypeEnum(enum.Enum):
+    sell = 'продаю'
+    buy = 'куплю'
+    lend = 'сдаю'
+    borrow = 'одолжу'
 
 # TODO two pooints of truths here in Column() and init
 class Product(BASE):
       __tablename__ = "product"
 
       id = Column(Integer, primary_key=True, autoincrement=True)
+      seller_id = Column(Integer, nullable=False)
+      category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+      message_id = Column(Integer, nullable=False, unique=True)
 
       name = Column(String(256), nullable=False)
       has_image = Column(Boolean, default=False)
       description = Column(String(10000), nullable=False)
+      product_type = Column(Enum(ProductTypeEnum))
 
       is_archived = Column(Boolean, default=False)
-      is_selling = Column(Boolean, default=True)
       is_sold = Column(Boolean, default=False)
 
-      message_id = Column(Integer, nullable=False, unique=True)
-
-      seller_id = Column(Integer, nullable=False)
-      category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
-
-      def __init__(self, name, has_image, description, seller_id, category_id, message_id, is_archived=False, is_selling=True, is_sold=False):
+      def __init__(self, name, has_image, description, product_type, seller_id, category_id, message_id, is_archived=False, is_sold=False):
         self.name = name 
         self.is_archived = is_archived
         self.has_image = has_image
@@ -76,7 +81,7 @@ class Product(BASE):
         self.category_id = category_id
         self.message_id = message_id
         self.is_archived = is_archived
-        self.is_selling = is_selling
+        self.product_type = product_type
         self.is_sold = is_sold
 
       def __repr__(self):
@@ -111,10 +116,10 @@ def add_buyer(product_id, buyer_id):
             SESSION.flush()
         SESSION.commit()
 
-def add_product(message_id, is_selling, name, description, seller_id, category_name, has_image):
+def add_product(message_id, product_type, name, description, seller_id, category_name, has_image):
     category = SESSION.query(Category).where(Category.name == category_name).first() # TODO try except
     with INSERTION_LOCK:
-        product = Product(name, has_image, description, seller_id, category.id, message_id, is_selling=is_selling)
+        product = Product(name, has_image, description, product_type, seller_id, category.id, message_id)
         SESSION.add(product)
         SESSION.flush()
         SESSION.commit()

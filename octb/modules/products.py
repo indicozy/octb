@@ -22,6 +22,17 @@ STORAGE=config('STORAGE')
 MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')
 MARKETPLACE_CHAT_ACCOUNT=config('MARKETPLACE_CHAT_ACCOUNT')
 
+buy_sell_button = ReplyKeyboardMarkup([
+    [
+        'Куплю',
+        'Продаю',
+    ],
+    [
+        'Сдаю',
+        'Одолжу',
+    ]
+], one_time_keyboard=True)
+
 # conversation
 async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
@@ -29,9 +40,7 @@ async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     product_preps[user.id] = {}
 
     await update.message.reply_text(
-        "Hi! My name is Professor Bot. I will hold a conversation with you. "
-        "Send /cancel to stop talking to me.\n\n"
-        "Are you a boy or a girl?"
+        "Выберите категорию", reply_markup=buy_sell_button
     )
 
     return PRODUCT_TYPE
@@ -42,12 +51,10 @@ async def product_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     user_text = update.message.text
 
-    if user_text in ['Купить', 'купить']:
-        product_preps[user.id]['is_selling'] = False
-    elif user_text in ['Продать', 'продать']:
-        product_preps[user.id]['is_selling'] = True 
+    if user_text in ['Куплю', 'куплю', 'Продаю', 'продаю', 'Одолжу', 'одолжу', 'Сдаю', 'сдаю']:
+        product_preps[user.id]['product_type'] = sql.ProductTypeEnum(user_text.lower())
     else:
-        await update.message.reply_text("Купить/Продать?")
+        await update.message.reply_text("Куплю/Продаю/Сдаю/Одолжу?", reply_markup=buy_sell_button)
         return PRODUCT_TYPE
     
     await update.message.reply_text(
@@ -137,12 +144,8 @@ async def category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return CONFIRMATION
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    def marketplace_text(name, description, is_selling, category):
-        tag='куплю'
-        if product_type:
-            tag='продам'
-
-        return f"""#{tag.lower()} #{category.lower()} \n{name}\n\n{description}\n\n @{MARKETPLACE_CHAT_ACCOUNT}"""
+    def marketplace_text(name, description, product_type, category):
+        return f"""#{product_type.value.lower()} #{category.lower()} \n{name}\n\n{description}\n\n @{MARKETPLACE_CHAT_ACCOUNT}"""
 
     """Stores the selected gender and asks for a photo."""
     user = update.message.from_user
@@ -162,22 +165,23 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         storage_folder = f'{STORAGE}/photos/product/'
 
+        post_text = generate_post(product_preps[user.id]['name'], product_preps[user.id]['description'],
+                                    [product_preps[user.id]['product_type'].value, product_preps[user.id]['category']])
+
         if product_preps[user.id]['photo_location']:
             message = await context.bot.send_photo(chat_id=MARKETPLACE_CHAT_ID, photo=open(product_preps[user.id]['photo_location'], 'rb'),
-                                                     caption=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
-                                                                           product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
+                                                     caption=post_text)
         else: 
             message = await context.bot.send_message(chat_id=MARKETPLACE_CHAT_ID,
-                                                     text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
-                                                                           product_preps[user.id]['is_selling'], product_preps[user.id]['category']))
-        product_new = sql.add_product(message_id=message.message_id, is_selling=product_preps[user.id]['is_selling'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
+                                                     text=post_text)
+        print(product_preps[user.id]['product_type'])
+        product_new = sql.add_product(message_id=message.message_id, product_type=product_preps[user.id]['product_type'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
                        seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
                        
         menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
 
         message_edited = await context.bot.edit_message_text(chat_id=MARKETPLACE_CHAT_ID, message_id = message.id,
-                                                     text=marketplace_text(product_preps[user.id]['name'], product_preps[user.id]['description'],
-                                                                           product_preps[user.id]['is_selling'], product_preps[user.id]['category']),
+                                                     text=post_text,
                                                      reply_markup=menu)
 
         await update.message.reply_text("Продукт добавлен!")
@@ -272,7 +276,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.product_type), sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
     return ConversationHandler.END
 
 async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -298,7 +302,7 @@ async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAUL
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.is_selling), sql.get_category_by_id(item.category_id).name]) + \
+        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.product_type), sql.get_category_by_id(item.category_id).name]) + \
             "ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ? ПОСЛЕ УДАЛЕНИЯ ОБЪЯВЛЕНИЕ НЕЛЬЗЯ ВОССТАНОВИТЬ"
         , reply_markup=menu)
     return ConversationHandler.END
@@ -365,6 +369,9 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         [
             [
                 InlineKeyboardButton("Контакты", url=f"tg://user?id={user.id}"),
+            ],
+            [
+                InlineKeyboardButton("Закрыть Объявление", callback_data=f"SOLD_{product_id}"),
             ]
         ]
     ) 
@@ -394,6 +401,31 @@ async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_text = "Объявление закрыто. Вы больше не будете получать заявки."
 
     await query.edit_message_text(reply_text, reply_markup=menu)
+
+async def item_sell_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+    await query.answer()
+
+    user = update.callback_query.from_user
+    text = query.data
+    product_id = text.replace("SOLD_", "")
+    LOGGER.info("callback of %s: %s", user.id, text)
+    LOGGER.info(product_id)
+
+    item_sold = sql.product_sold(product_id, user.id) # TODO add verification of callback
+
+    menu = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("< Назад", callback_data="PRODUCT_START"),
+            ]
+        ]
+    ) 
+
+    reply_text = "Объявление закрыто. Вы больше не будете получать заявки."
+
+    await context.bot.send_message(chat_id=user.id, text= reply_text, reply_markup=menu)
 
 async def item_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
@@ -456,6 +488,7 @@ edit_start_3 = CallbackQueryHandler(item_menu_select, pattern="^" + "PRODUCT_STA
 edit_item_menu = CallbackQueryHandler(item_menu_get_id, pattern="^" + "PRODUCT_MENU_")
 edit_item_archive_confirm = CallbackQueryHandler(item_archive_confirmation, pattern="^" + "ARCHIVE_")
 edit_item_has_sold  = CallbackQueryHandler(item_sell, pattern="^" + "SELL_")
+edit_item_has_sold_reply  = CallbackQueryHandler(item_sell_reply, pattern="^" + "SOLD_")
 edit_item_has_restored  = CallbackQueryHandler(item_restore, pattern="^" + "RESTORE_")
 
 edit_item_has_archived = CallbackQueryHandler(item_archive, pattern="^" + "ARCHIVE_CONFIRMED_")
@@ -471,6 +504,7 @@ edit_handlers = [
     edit_item_has_archived,
     edit_item_archive_confirm,
     edit_item_has_sold,
+    edit_item_has_sold_reply,
     edit_item_has_restored,
 ]
 
