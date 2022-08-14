@@ -12,13 +12,14 @@ class Category(BASE):
       __tablename__ = "category"
 
       id = Column(Integer, primary_key=True, autoincrement=True)
+
       name = Column(String(64), unique=True)
 
       def __init__(self, name):
           self.name = name 
 
       def __repr__(self):
-          return "<User {} ({})>".format(self.id, self.name)
+          return "<Category {} ({})>".format(self.id, self.name)
 Category.__table__.create(checkfirst=True)
 
 class Subcategory(BASE):
@@ -35,7 +36,26 @@ class Subcategory(BASE):
 
       def __repr__(self):
           return "<Subcategory {} ({})>".format(self.id, self.name)
-Market_subcategory.__table__.create(checkfirst=True)
+Subcategory.__table__.create(checkfirst=True)
+
+def get_subcategories_by_category_id(category_id):
+    try:
+        return SESSION.query(Subcategory).where(Subcategory.category_id == category_id).all()
+    finally:
+        SESSION.close()
+        
+def get_subcategory_by_id(subcategory_id):
+    try:
+        return SESSION.query(Subcategory).where(Subcategory.id == subcategory_id).first()
+    finally:
+        SESSION.close()
+
+def get_category_by_subcategory_id(subcategory_id):
+    subcategory_obj = get_subcategory_by_id(subcategory_id)
+    try:
+        return SESSION.query(Category).where(Category.id == subcategory_obj.category_id).first()
+    finally:
+        SESSION.close()
 
 def get_all_categories():
     try:
@@ -61,8 +81,24 @@ def add_category(category_name):
         if len(category) == 0:
             category = Category(category_name)
             SESSION.add(category)
-            SESSION.flush()
-        SESSION.commit()
+            SESSION.commit()
+            return category
+        else:
+            return category[0]
+
+def add_subcategory(subcategory, category_id):
+    with INSERTION_LOCK:
+        subcategory_obj = SESSION.query(Category)\
+            .where(Subcategory.name==subcategory)\
+            .where(Subcategory.category_id==category_id)\
+            .all()
+        if len(subcategory_obj) == 0:
+            subcategory_obj = Subcategory(category_id, subcategory)
+            SESSION.add(subcategory_obj)
+            SESSION.commit()
+            return subcategory_obj
+        else:
+            return subcategory_obj[0]
         
 class ProductTypeEnum(enum.Enum):
     sell = 'продаю'
@@ -77,27 +113,29 @@ class Product(BASE):
 
       id = Column(Integer, primary_key=True, autoincrement=True)
       seller_id = Column(Integer, nullable=False)
-      category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+      subcategory_id = Column(Integer, ForeignKey("subcategory.id"), nullable=False)
       message_id = Column(Integer, nullable=False, unique=True)
 
       name = Column(String(256), nullable=False)
       has_image = Column(Boolean, default=False)
       description = Column(String(10000), nullable=False)
       product_type = Column(Enum(ProductTypeEnum))
+      price = Column(Integer, nullable=False)
 
       is_archived = Column(Boolean, default=False)
       is_sold = Column(Boolean, default=False)
 
-      def __init__(self, name, has_image, description, product_type, seller_id, category_id, message_id, is_archived=False, is_sold=False):
+      def __init__(self, name, has_image, description, product_type, price, seller_id, subcategory_id, message_id, is_archived=False, is_sold=False):
         self.name = name 
         self.is_archived = is_archived
         self.has_image = has_image
         self.description = description
+        self.product_type = product_type
+        self.price = price
         self.seller_id = seller_id
-        self.category_id = category_id
+        self.subcategory_id = subcategory_id
         self.message_id = message_id
         self.is_archived = is_archived
-        self.product_type = product_type
         self.is_sold = is_sold
 
       def __repr__(self):
@@ -132,10 +170,11 @@ def add_buyer(product_id, buyer_id):
             SESSION.flush()
         SESSION.commit()
 
-def add_product(message_id, product_type, name, description, seller_id, category_name, has_image):
-    category = SESSION.query(Category).where(Category.name == category_name).first() # TODO try except
+def add_product(message_id, product_type, name, description, price, seller_id, category, subcategory, has_image):
+    category_obj = SESSION.query(Category).where(Category.id==category).first()
+    subcategory_obj = SESSION.query(Subcategory).where(Subcategory.category_id == category_obj.id).all()[subcategory] # TODO try except
     with INSERTION_LOCK:
-        product = Product(name, has_image, description, product_type, seller_id, category.id, message_id)
+        product = Product(name, has_image, description, product_type, price, seller_id, subcategory_obj.id, message_id)
         SESSION.add(product)
         SESSION.flush()
         SESSION.commit()

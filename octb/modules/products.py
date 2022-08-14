@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 
 import octb.modules.sql.product as sql
 from octb import LOGGER
-from octb.modules.helpers.base import generate_post, selling_map
+from octb.modules.helpers.base import generate_post
 
 from octb import application
 
@@ -30,6 +30,9 @@ buy_sell_button = ReplyKeyboardMarkup([
     [
         'Сдаю',
         'Одолжу',
+    ],
+    [
+        'Отдам',
     ]
 ], one_time_keyboard=True)
 
@@ -54,7 +57,7 @@ async def product_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     if user_text in ['куплю', 'продаю', 'одолжу', 'сдаю',  'отдам']:
         product_preps[user.id]['product_type'] = sql.ProductTypeEnum(user_text.lower())
     else:
-        await update.message.reply_text("Куплю/Продаю/Сдаю/Одолжу?", reply_markup=buy_sell_button)
+        await update.message.reply_text("Куплю/Продаю/Сдаю/Одолжу/Отдам?", reply_markup=buy_sell_button)
         return PRODUCT_TYPE
     
     await update.message.reply_text(
@@ -84,18 +87,36 @@ async def description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     product_preps[user.id]['description'] = update.message.text
     
     await update.message.reply_text(
-        "image"
+        "price"
         "Send /cancel to stop talking to me.\n\n"
     )
 
-    return IMAGE
+    return PRICE
 
 async def skip_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send a description.", user.first_name)
     product_preps[user.id]['description'] = ""
     await update.message.reply_text(
-        "I bet you look great! Now, send me your image please, or send /skip."
+        "I bet you look great! Now, send me your price please, or send /skip."
+    )
+
+    return PRICE
+
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    user = update.message.from_user
+    text = update.message.text
+    LOGGER.info("price of %s: %s", user.first_name, update.message.text)
+    if not text.isdigit():
+        await update.message.reply_text("send price")
+        return PRICE
+
+    product_preps[user.id]['price'] = int(text)
+    
+    await update.message.reply_text(
+        "image"
+        "Send /cancel to stop talking to me.\n\n"
     )
 
     return IMAGE
@@ -116,6 +137,7 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     product_preps[user.id]['photo_location'] = storage_location
 
     categories = sql.get_all_categories()
+    product_preps[user.id]['categories'] = [category.name for category in categories]
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
 
     await update.message.reply_text(text)
@@ -128,6 +150,7 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     product_preps[user.id]['photo_location'] = None
 
     categories = sql.get_all_categories()
+    product_preps[user.id]['categories'] = [category.name for category in categories]
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
     await update.message.reply_text(text)
 
@@ -137,7 +160,31 @@ async def category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
     user = update.message.from_user
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
-    product_preps[user.id]['category'] = update.message.text
+    text = update.message.text
+
+    if not text.isdigit():
+        await update.message.reply_text("Choose a number")
+        return CATEGORY
+    product_preps[user.id]['category'] = int(update.message.text) - 1
+
+    subcategories = sql.get_subcategories_by_category_id(int(update.message.text))
+    product_preps[user.id]['subcategories'] = [subcategory.name for subcategory in subcategories]
+
+    text = "\n".join([f"{index + 1}. {subcategory.name}" for subcategory, index in zip(subcategories, range(len(subcategories)))])
+    await update.message.reply_text(text)
+
+    return SUBCATEGORY
+
+async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    user = update.message.from_user
+    LOGGER.info("name of %s: %s", user.first_name, update.message.text)
+    text = update.message.text
+
+    if not text.isdigit():
+        await update.message.reply_text("Choose a number")
+        return SUBCATEGORY
+    product_preps[user.id]['subcategory'] = int(update.message.text) - 1
 
     await update.message.reply_text("y/n")
 
@@ -166,7 +213,9 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         storage_folder = f'{STORAGE}/photos/product/'
 
         post_text = generate_post(product_preps[user.id]['name'], product_preps[user.id]['description'],
-                                    [product_preps[user.id]['product_type'].value, product_preps[user.id]['category']])
+                                    [product_preps[user.id]['product_type'].value, product_preps[user.id]['categories'][product_preps[user.id]['category']],
+                                        product_preps[user.id]['subcategories'][product_preps[user.id]['subcategory']]
+                                     ])
 
         if product_preps[user.id]['photo_location']:
             message = await context.bot.send_photo(chat_id=MARKETPLACE_CHAT_ID, photo=open(product_preps[user.id]['photo_location'], 'rb'),
@@ -174,13 +223,17 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         else: 
             message = await context.bot.send_message(chat_id=MARKETPLACE_CHAT_ID,
                                                      text=post_text)
-        print(product_preps[user.id]['product_type'])
         product_new = sql.add_product(message_id=message.message_id, product_type=product_preps[user.id]['product_type'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
-                       seller_id=user.id, category_name=product_preps[user.id]['category'], has_image= product_preps[user.id]['photo_location'] != None)
+                       price=product_preps[user.id]['price'], seller_id=user.id, category=product_preps[user.id]['category'], subcategory=product_preps[user.id]['subcategory'], has_image= product_preps[user.id]['photo_location'] != None)
                        
         menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
 
-        message_edited = await context.bot.edit_message_text(chat_id=MARKETPLACE_CHAT_ID, message_id = message.id,
+        if product_preps[user.id]['photo_location']:
+            message_edited = await context.bot.edit_message_caption(chat_id=MARKETPLACE_CHAT_ID, message_id = message.id,
+                                                     caption=post_text,
+                                                     reply_markup=menu)
+        else:
+            message_edited = await context.bot.edit_message_text(chat_id=MARKETPLACE_CHAT_ID, message_id = message.id,
                                                      text=post_text,
                                                      reply_markup=menu)
 
@@ -276,7 +329,7 @@ async def item_menu_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.product_type), sql.get_category_by_id(item.category_id).name]), reply_markup=menu)
+        generate_post(headline=item.name, text=item.description, hashtags=[item.product_type.value, sql.get_category_by_subcategory_id(item.subcategory_id).name,  sql.get_subcategory_by_id(item.subcategory_id).name]), reply_markup=menu)
     return ConversationHandler.END
 
 async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -302,7 +355,7 @@ async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAUL
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[selling_map(item.product_type), sql.get_category_by_id(item.category_id).name]) + \
+        generate_post(headline=item.name, text=item.description, hashtags=[item.product_type, sql.get_subcategory_by_id(item.subcategory_id).name]) + \
             "ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ? ПОСЛЕ УДАЛЕНИЯ ОБЪЯВЛЕНИЕ НЕЛЬЗЯ ВОССТАНОВИТЬ"
         , reply_markup=menu)
     return ConversationHandler.END
@@ -354,8 +407,6 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     LOGGER.info(product_id)
 
     item = sql.get_product_by_id_no_verify(product_id) # TODO add verification of callback
-    print(item.is_archived, item.is_sold)
-    print(item)
 
     if item.is_archived or item.is_sold:
         await query.answer(text='Продукт уже куплен или удален.', show_alert=True)
@@ -451,7 +502,7 @@ async def item_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     await query.edit_message_text(reply_text, reply_markup=menu)
 
-PRODUCT_TYPE, NAME, DESCRIPTION, IMAGE, CATEGORY, CONFIRMATION = range(6)
+PRODUCT_TYPE, NAME, DESCRIPTION, PRICE, IMAGE, CATEGORY, SUBCATEGORY, CONFIRMATION = range(8)
 
 # main
 add_product = ConversationHandler(
@@ -464,9 +515,11 @@ add_product = ConversationHandler(
         NAME: [MessageHandler(~filters.COMMAND & filters.TEXT, name)],
         DESCRIPTION: [
             MessageHandler(~filters.COMMAND & filters.TEXT, description),
-
             MessageHandler(filters.Regex('^Пропустить$'), skip_description),
             CommandHandler("skip", skip_description),
+            ],
+        PRICE: [
+                MessageHandler(~filters.COMMAND & filters.TEXT, price),
             ],
         IMAGE: [
             MessageHandler(filters.PHOTO, image),
@@ -475,6 +528,7 @@ add_product = ConversationHandler(
             CommandHandler("skip", skip_image),
         ],
         CATEGORY: [MessageHandler(~filters.COMMAND & filters.TEXT, category)],
+        SUBCATEGORY: [MessageHandler(~filters.COMMAND & filters.TEXT, subcategory)],
         CONFIRMATION: [MessageHandler(~filters.COMMAND & filters.TEXT, confirmation)],
     },
     fallbacks=[CommandHandler("cancel", cancel)],

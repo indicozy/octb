@@ -25,9 +25,7 @@ for module_name in ALL_MODULES:
         raise Exception("Can't have two modules with the same name! Please change one")
 
 def main():
-    print(IMPORTED)
     application.run_polling()
-    # add_all_handlers(application)
 
 if __name__ == '__main__':
     generator.generate_categories()
