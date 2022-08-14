@@ -1,4 +1,6 @@
 - Verification by email
 -[x] Callback from Купить must show that message is sent or item is bought
 - set user id to string
-- add events of the day 
+- add events of the day
+- Куплю/продаю/Сдаю/Одолжу
+- Редактор товаров
