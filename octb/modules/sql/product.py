@@ -19,8 +19,23 @@ class Category(BASE):
 
       def __repr__(self):
           return "<User {} ({})>".format(self.id, self.name)
-
 Category.__table__.create(checkfirst=True)
+
+class Subcategory(BASE):
+      __tablename__ = "subcategory"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+
+      name = Column(String(256), nullable=False)
+
+      def __init__(self, category_id, name):
+        self.name = name
+        self.category_id = category_id
+
+      def __repr__(self):
+          return "<Subcategory {} ({})>".format(self.id, self.name)
+Market_subcategory.__table__.create(checkfirst=True)
 
 def get_all_categories():
     try:
@@ -54,6 +69,7 @@ class ProductTypeEnum(enum.Enum):
     buy = 'куплю'
     lend = 'сдаю'
     borrow = 'одолжу'
+    give = 'отдам'
 
 # TODO two pooints of truths here in Column() and init
 class Product(BASE):

@@ -49,9 +49,9 @@ async def product_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     """Stores the selected gender and asks for a photo."""
     user = update.message.from_user
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
-    user_text = update.message.text
+    user_text = update.message.text.lower()
 
-    if user_text in ['Куплю', 'куплю', 'Продаю', 'продаю', 'Одолжу', 'одолжу', 'Сдаю', 'сдаю']:
+    if user_text in ['куплю', 'продаю', 'одолжу', 'сдаю',  'отдам']:
         product_preps[user.id]['product_type'] = sql.ProductTypeEnum(user_text.lower())
     else:
         await update.message.reply_text("Куплю/Продаю/Сдаю/Одолжу?", reply_markup=buy_sell_button)
