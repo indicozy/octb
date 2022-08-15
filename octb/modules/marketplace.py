@@ -89,7 +89,10 @@ async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     buyer_preps.pop(user.id) # TODO try except
 
-    menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_SELLER_" + str(product.id))]]) 
+    menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Купить", callback_data="BUY_SELLER_" + str(product.id))],
+        [InlineKeyboardButton("Оставить Оценку", callback_data="REVIEW_" + str(product.id))],
+        ]) 
 
     await update.message.reply_text(
         generate_post_product(product),
@@ -217,5 +220,23 @@ buy_seller_handler = ConversationHandler(
     },
     fallbacks=[CommandHandler("cancel", cancel)],
 )
+
+# REVIEW_POINTS, REVIEW_DESCRIPTION = range(2)
+
+# buy_seller_handler = ConversationHandler(
+#     entry_points=[
+#             # CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
+#             CallbackQueryHandler(buy_seller_callback, pattern="^REVIEW_")
+#         ],
+#     states={
+#         REVIEW_POINTS: [
+#             MessageHandler(~filters.COMMAND & filters.TEXT, review_points),
+#             ],
+#         REVIEW_DESCRIPTION: [
+#             MessageHandler(~filters.COMMAND & filters.TEXT, review_description),
+#             ],
+#     },
+#     fallbacks=[CommandHandler("cancel", cancel)],
+# )
 
 application.add_handlers([marketplace, buy_seller_handler])

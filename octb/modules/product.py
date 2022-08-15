@@ -150,12 +150,12 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     await newFile.download(storage_location)
     
-    update.message.reply_text(text="download succesful")
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     product_preps[user.id]['photo_location'] = storage_location
 
     categories = sql.get_all_categories()
-    product_preps[user.id]['categories'] = [category.name for category in categories]
+    product_preps[user.id]['categories'] = categories
+    print(categories)
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
 
     await update.message.reply_text(text)
@@ -169,6 +169,7 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     categories = sql.get_all_categories()
     product_preps[user.id]['categories'] = categories
+    print(categories)
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
     await update.message.reply_text(text)
 
@@ -230,6 +231,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         storage_folder = f'{STORAGE}/photos/product/'
 
+        print(product_preps[user.id]['category'])
+        print(product_preps[user.id]['categories'])
         post_text = generate_post(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                     [product_preps[user.id]['product_type'].value, product_preps[user.id]['category'].name,
                                         product_preps[user.id]['subcategory'].name
@@ -446,7 +449,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         ]
     ) 
 
-    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item), reply_markup=menu)
+    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post_product(item), reply_markup=menu)
 
 async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""

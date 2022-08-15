@@ -1,4 +1,4 @@
-- Verification by email!
+- Verification by email?
 -[x] Callback from Купить must show that message is sent or item is bought
 - set user id to string...
 - add events of the day...
@@ -15,6 +15,7 @@
 - Отзывы о продуктах!
 - Бан юзеров с его продуктами...
 - BUG: нет вывода картинок продуктов, везде!
+- Редактор продавца!
 - Отмена покупки продуктов?
 
 - Governing

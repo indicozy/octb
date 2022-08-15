@@ -323,3 +323,38 @@ def get_product_by_id_no_verify(product_id):
         return query.first()
     finally:
       SESSION.close()
+
+class Review(BASE):
+      __tablename__ = "review"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+
+      product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
+      user_id = Column(Integer, nullable=False) 
+      description = Column(String(4096), default="")
+
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+      def __init__(self, product_id, user_id, description=""):
+        self.product_id = product_id 
+        self.user_id = user_id 
+        self.description = description
+
+      def __repr__(self):
+          return "<Review {}>".format(self.id)
+
+
+def add_review(product_id, user_id, description=""):
+    with INSERTION_LOCK:
+        review = Review(product_id, user_id, description=description)
+        SESSION.add(review)
+        SESSION.flush()
+        SESSION.commit()
+    return review
+
+def get_reviews_to_user(user_id): # review -> product -> user
+    products = SESSION.query(Product).where(Product.seller_id == user).all()
+    query = SESSION.query(Reviews)\
+            .where(Review.product_id.in_([product.id for product in products]))
+    return query.all()
