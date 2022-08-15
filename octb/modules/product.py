@@ -1,4 +1,3 @@
-from decouple import config
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler, CallbackQueryHandler
 
@@ -13,6 +12,8 @@ import os
 
 # TODO add redis
 product_preps = {}
+
+__mod_name__ = "product"
 
 from decouple import config
 MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')

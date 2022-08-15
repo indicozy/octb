@@ -105,11 +105,34 @@ class Seller(BASE):
 
       user_id = Column(Integer, primary_key=True)
 
-      def __init__(self, user_id, username=None):
+      def __init__(self, user_id):
           self.user_id = user_id
 
       def __repr__(self):
           return "<Seller ({})>".format(self.user_id)
+Seller.__table__.create(checkfirst=True)
+
+def add_seller(user_id):
+    with INSERTION_LOCK:
+        seller_obj = SESSION.query(Seller).where(Seller.user_id == user_id).all()
+        if len(seller_obj) == 0:
+            seller_obj = Seller(user_id)
+            SESSION.add(seller_obj)
+            SESSION.commit()
+            return seller_obj
+        else:
+            return seller_obj[0]
+
+def remove_seller(user_id):
+    with INSERTION_LOCK:
+        seller_obj = SESSION.query(Seller).where(Seller.user_id == user_id).all()
+        if len(seller_obj) != 0:
+            SESSION.delete(seller_obj[0])
+            SESSION.commit()
+            return True
+
+        SESSION.close()
+        return False
         
 class ProductTypeEnum(enum.Enum):
     sell = 'продаю'
@@ -172,13 +195,9 @@ Product_buyer.__table__.create(checkfirst=True)
 
 def add_buyer(product_id, buyer_id):
     with INSERTION_LOCK:
-        product_buyer = SESSION.query(Product_buyer)\
-          .where(Product_buyer.buyer_id==buyer_id)\
-          .where(Product_buyer.product_id==product_id).all() # TODO change to new one https://stackoverflow.com/questions/41636169/how-to-use-postgresqls-insert-on-conflict-upsert-feature-with-flask-sqlal
-        if len(product_buyer) == 0:
-            product_buyer = Product_buyer(product_id, buyer_id)
-            SESSION.add(product_buyer)
-            SESSION.flush()
+        product_buyer = Product_buyer(product_id, buyer_id)
+        SESSION.add(product_buyer)
+        SESSION.flush()
         SESSION.commit()
 
 def add_product(message_id, product_type, name, description, price, seller_id, category, subcategory, has_image):
