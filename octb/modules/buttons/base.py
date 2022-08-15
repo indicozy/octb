@@ -2,7 +2,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemo
 
 BASE_BUTTONS = ReplyKeyboardMarkup([
     [
-        'Купить/Продать',
+        'Магазин',
         'Мои Объявления',
     ]
 ], one_time_keyboard=True)

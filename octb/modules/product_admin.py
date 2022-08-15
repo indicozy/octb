@@ -8,13 +8,17 @@ from octb import LOGGER
 from octb import application
 
 from decouple import config
-SUPERADMIN_ID=config('SUPERADMIN_ID')
+SUPERADMIN_ID=int(config('SUPERADMIN_ID'))
 
 
 async def add_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     text = update.message.text
-
+    print(user.id,SUPERADMIN_ID)
+    print(user.id != SUPERADMIN_ID)
+    if user.id != SUPERADMIN_ID:
+        await update.message.reply_text("У вас нет прав")
+        return
     if len(text.split(" ")) != 2 or not text.split(" ")[1].isdigit():
         await update.message.reply_text("Please send user id")
         return
@@ -37,6 +41,10 @@ async def add_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
 async def remove_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     text = update.message.text
+    if user.id != SUPERADMIN_ID:
+        await update.message.reply_text("У вас нет прав")
+        return
+
     if len(text.split(" ")) != 2 or not text.split(" ")[1].isdigit():
         await update.message.reply_text("Please send user id")
         return

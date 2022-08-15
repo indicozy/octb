@@ -3,6 +3,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 
 import octb.modules.sql.product as sql
 from octb import LOGGER
+from octb.modules.helpers.product import generate_post_product
 from octb.modules.helpers.base import generate_post
 
 from octb import application
@@ -49,7 +50,7 @@ async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     return PRODUCT_TYPE
 
-async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def new_product_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
     query = update.callback_query
     await query.answer()
@@ -167,7 +168,7 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     product_preps[user.id]['photo_location'] = None
 
     categories = sql.get_all_categories()
-    product_preps[user.id]['categories'] = [category.name for category in categories]
+    product_preps[user.id]['categories'] = categories
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
     await update.message.reply_text(text)
 
@@ -182,10 +183,10 @@ async def category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not text.isdigit():
         await update.message.reply_text("Choose a number")
         return CATEGORY
-    product_preps[user.id]['category'] = int(update.message.text) - 1
+    product_preps[user.id]['category'] = product_preps[user.id]['categories'][int(update.message.text) - 1]
 
     subcategories = sql.get_subcategories_by_category_id(int(update.message.text))
-    product_preps[user.id]['subcategories'] = [subcategory.name for subcategory in subcategories]
+    product_preps[user.id]['subcategories'] = subcategories
 
     text = "\n".join([f"{index + 1}. {subcategory.name}" for subcategory, index in zip(subcategories, range(len(subcategories)))])
     await update.message.reply_text(text)
@@ -201,7 +202,7 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     if not text.isdigit():
         await update.message.reply_text("Choose a number")
         return SUBCATEGORY
-    product_preps[user.id]['subcategory'] = int(update.message.text) - 1
+    product_preps[user.id]['subcategory'] = product_preps[user.id]['subcategories'][int(update.message.text) - 1]
 
     await update.message.reply_text("y/n")
 
@@ -230,8 +231,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         storage_folder = f'{STORAGE}/photos/product/'
 
         post_text = generate_post(product_preps[user.id]['name'], product_preps[user.id]['description'],
-                                    [product_preps[user.id]['product_type'].value, product_preps[user.id]['categories'][product_preps[user.id]['category']],
-                                        product_preps[user.id]['subcategories'][product_preps[user.id]['subcategory']]
+                                    [product_preps[user.id]['product_type'].value, product_preps[user.id]['category'].name,
+                                        product_preps[user.id]['subcategory'].name
                                      ])
 
         if product_preps[user.id]['photo_location']:
@@ -241,7 +242,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             message = await context.bot.send_message(chat_id=MARKETPLACE_CHAT_ID,
                                                      text=post_text)
         product_new = sql.add_product(message_id=message.message_id, product_type=product_preps[user.id]['product_type'], name=product_preps[user.id]['name'], description=product_preps[user.id]['description'],
-                       price=product_preps[user.id]['price'], seller_id=user.id, category=product_preps[user.id]['category'], subcategory=product_preps[user.id]['subcategory'], has_image= product_preps[user.id]['photo_location'] != None)
+                       price=product_preps[user.id]['price'], seller_id=user.id, subcategory=product_preps[user.id]['subcategory'].id, has_image= product_preps[user.id]['photo_location'] != None)
                        
         menu = InlineKeyboardMarkup([[InlineKeyboardButton("Купить", callback_data="BUY_PRODUCT_" + str(product_new.id))]]) 
 
@@ -373,7 +374,7 @@ async def item_archive_confirmation(update: Update, context: ContextTypes.DEFAUL
     ) 
 
     await query.edit_message_text(
-        generate_post(headline=item.name, text=item.description, hashtags=[item.product_type, sql.get_subcategory_by_id(item.subcategory_id).name]) + \
+        generate_post_product(item) + \
             "ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ? ПОСЛЕ УДАЛЕНИЯ ОБЪЯВЛЕНИЕ НЕЛЬЗЯ ВОССТАНОВИТЬ"
         , reply_markup=menu)
     return ConversationHandler.END
@@ -445,7 +446,7 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         ]
     ) 
 
-    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item.name, item.description, []), reply_markup=menu)
+    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post(item), reply_markup=menu)
 
 async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
@@ -525,8 +526,8 @@ PRODUCT_TYPE, NAME, DESCRIPTION, PRICE, IMAGE, CATEGORY, SUBCATEGORY, CONFIRMATI
 # main
 add_product = ConversationHandler(
     entry_points=[
-            CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
-            MessageHandler(filters.TEXT & filters.Regex('Купить/Продать') & filters.ChatType.PRIVATE, new_product),
+            CallbackQueryHandler(new_product_callback, pattern="^" + "PRODUCT_NEW" + "$"),
+            # MessageHandler(filters.TEXT & filters.Regex('Купить/Продать') & filters.ChatType.PRIVATE, new_product),
             CommandHandler("new_item", new_product, filters=filters.ChatType.PRIVATE),
         ],
     states={

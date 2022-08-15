@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime
 from octb.modules.sql import BASE, SESSION
 
 class User(BASE):
@@ -8,6 +8,9 @@ class User(BASE):
 
       user_id = Column(Integer, primary_key=True)
       username = Column(UnicodeText)
+
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
       def __init__(self, user_id, username=None):
           self.user_id = user_id

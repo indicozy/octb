@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean, Enum
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean, Enum, DateTime
 from octb.modules.sql import BASE, SESSION
 
 from octb.modules.sql.user import User # needed for Foreignkey, do not delete
@@ -14,6 +14,9 @@ class Category(BASE):
       id = Column(Integer, primary_key=True, autoincrement=True)
 
       name = Column(String(64), unique=True)
+
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
       def __init__(self, name):
           self.name = name 
@@ -29,6 +32,9 @@ class Subcategory(BASE):
       category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
 
       name = Column(String(256), nullable=False)
+
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
       def __init__(self, category_id, name):
         self.name = name
@@ -104,13 +110,36 @@ class Seller(BASE):
       __tablename__ = "seller"
 
       user_id = Column(Integer, primary_key=True)
+        
+      name = Column(String(256), default="")
+      description = Column(String(512), default="")
+      has_delivery = Column(Boolean, default=False)
+      working_time = Column(String(32), default="")
+      phone_number = Column(String(32), default="")
 
-      def __init__(self, user_id):
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+      def __init__(self, user_id, name="", description="", has_delivery=False, working_time=None, phone_number=""):
           self.user_id = user_id
+          self.name = name
+          self.description = description
+          self.has_delivery = has_delivery
+          self.working_time = working_time
+          self.phone_number = phone_number
 
       def __repr__(self):
           return "<Seller ({})>".format(self.user_id)
 Seller.__table__.create(checkfirst=True)
+
+def get_seller_by_product_id(product_id):
+    product = get_product_by_id_no_verify(product_id)
+    try:
+        return SESSION.query(Seller)\
+          .where(Seller.user_id == product.seller_id)\
+          .first()
+    finally:
+        SESSION.close()
 
 def add_seller(user_id):
     with INSERTION_LOCK:
@@ -159,6 +188,9 @@ class Product(BASE):
       is_archived = Column(Boolean, default=False)
       is_sold = Column(Boolean, default=False)
 
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
       def __init__(self, name, has_image, description, product_type, price, seller_id, subcategory_id, message_id, is_archived=False, is_sold=False):
         self.name = name 
         self.is_archived = is_archived
@@ -183,28 +215,31 @@ class Product_buyer(BASE):
 
       product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
       buyer_id = Column(Integer, nullable=False) # user.id
+      message_id = Column(Integer, nullable=True)
 
-      def __init__(self, product_id, buyer_id):
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+      def __init__(self, product_id, buyer_id, message_id=None):
         self.product_id = product_id 
         self.buyer_id = buyer_id 
+        self.message_id = message_id
 
       def __repr__(self):
           return "<Product Buyer {} ({})>".format(self.id, self.buyer_id)
 
 Product_buyer.__table__.create(checkfirst=True)
 
-def add_buyer(product_id, buyer_id):
+def add_buyer(product_id, buyer_id, message_id=None):
     with INSERTION_LOCK:
-        product_buyer = Product_buyer(product_id, buyer_id)
+        product_buyer = Product_buyer(product_id, buyer_id, message_id=message_id)
         SESSION.add(product_buyer)
         SESSION.flush()
         SESSION.commit()
 
-def add_product(message_id, product_type, name, description, price, seller_id, category, subcategory, has_image):
-    category_obj = SESSION.query(Category).where(Category.id==category).first()
-    subcategory_obj = SESSION.query(Subcategory).where(Subcategory.category_id == category_obj.id).all()[subcategory] # TODO try except
+def add_product(message_id, product_type, name, description, price, seller_id, subcategory, has_image):
     with INSERTION_LOCK:
-        product = Product(name, has_image, description, product_type, price, seller_id, subcategory_obj.id, message_id)
+        product = Product(name, has_image, description, product_type, price, seller_id, subcategory, message_id)
         SESSION.add(product)
         SESSION.flush()
         SESSION.commit()
@@ -262,12 +297,24 @@ def get_active_products_from_tg_user(tg_id):
 
 def get_product_by_id(product_id, tg_id):
     query = SESSION.query(Product)\
-            .where(Product.id == product_id)
-    query = query.where(Product.seller_id == tg_id)
+            .where(Product.id == product_id)\
+            .where(Product.seller_id == tg_id)
     try:
         return query.first()
     finally:
       SESSION.close()
+
+def get_product_sellers_by_subcategory(subcategory_id):
+    sellers = SESSION.query(Seller).subquery()
+    query = SESSION.query(Product)\
+            .where(Product.subcategory_id == subcategory_id)\
+            .where(Product.is_sold == False)\
+            .where(Product.is_archived == False)\
+            .where(Product.product_type.in_((ProductTypeEnum.sell.name, ProductTypeEnum.lend.name)))\
+            .join(
+                sellers, Product.seller_id == sellers.c.user_id
+            )
+    return query.all()
 
 def get_product_by_id_no_verify(product_id):
     query = SESSION.query(Product)\
