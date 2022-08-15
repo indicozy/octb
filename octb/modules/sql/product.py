@@ -99,6 +99,17 @@ def add_subcategory(subcategory, category_id):
             return subcategory_obj
         else:
             return subcategory_obj[0]
+
+class Seller(BASE):
+      __tablename__ = "seller"
+
+      user_id = Column(Integer, primary_key=True)
+
+      def __init__(self, user_id, username=None):
+          self.user_id = user_id
+
+      def __repr__(self):
+          return "<Seller ({})>".format(self.user_id)
         
 class ProductTypeEnum(enum.Enum):
     sell = 'продаю'

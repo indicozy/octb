@@ -48,6 +48,22 @@ async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     return PRODUCT_TYPE
 
+async def new_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the conversation and asks the user about their gender."""
+    query = update.callback_query
+    await query.answer()
+
+    user = update.callback_query.from_user
+    text = query.data
+
+    product_preps[user.id] = {}
+
+    await context.bot.send_message( chat_id=user.id,
+        text="Выберите категорию", reply_markup=buy_sell_button
+    )
+
+    return PRODUCT_TYPE
+
 async def product_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
     user = update.message.from_user
@@ -287,7 +303,8 @@ async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     LOGGER.info("text of %s: %s", user.first_name, text)
 
     items = sql.get_active_products_from_tg_user(user.id)
-    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{'🔒' if item.is_sold else ''}{item.name[:20]}", callback_data="PRODUCT_MENU_" + str(item.id)) for item, index in zip(items, range(len(items)))])) 
+    menu = InlineKeyboardMarkup([[InlineKeyboardButton("Создать Объявление", callback_data="PRODUCT_NEW")]] + generate_menu([InlineKeyboardButton(f"{'🔒' if item.is_sold else ''}{item.name[:20]}",
+                                    callback_data="PRODUCT_MENU_" + str(item.id)) for item, index in zip(items, range(len(items)))]))
 
 
     if update.callback_query:
@@ -507,6 +524,7 @@ PRODUCT_TYPE, NAME, DESCRIPTION, PRICE, IMAGE, CATEGORY, SUBCATEGORY, CONFIRMATI
 # main
 add_product = ConversationHandler(
     entry_points=[
+            CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
             MessageHandler(filters.TEXT & filters.Regex('Купить/Продать') & filters.ChatType.PRIVATE, new_product),
             CommandHandler("new_item", new_product, filters=filters.ChatType.PRIVATE),
         ],
