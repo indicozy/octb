@@ -1,6 +1,6 @@
 - Verification by email?
 -[x] Callback from Купить must show that message is sent or item is bought
-- set user id to string...
+- set user and chat id to string...
 - add events of the day...
 -[x] Куплю/продаю/Сдаю/Одолжу
 - Редактор товаров...
@@ -16,7 +16,12 @@
 - Бан юзеров с его продуктами...
 - BUG: нет вывода картинок продуктов, везде!
 - Редактор продавца!
+- Редактор постов!
+- Мгновенные сообщения
+- Ссылка на паблик или сайт у продавца
 - Отмена покупки продуктов?
+
+- Кластер групп с курьерами
 
 - Governing
     - Процент с комиссии

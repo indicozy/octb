@@ -112,7 +112,6 @@ class Seller(BASE):
       user_id = Column(Integer, primary_key=True)
         
       name = Column(String(256), default="")
-      description = Column(String(512), default="")
       has_delivery = Column(Boolean, default=False)
       working_time = Column(String(32), default="")
       phone_number = Column(String(32), default="")
@@ -120,10 +119,9 @@ class Seller(BASE):
       created_at = Column(DateTime(timezone=True), server_default=func.now())
       updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-      def __init__(self, user_id, name="", description="", has_delivery=False, working_time=None, phone_number=""):
+      def __init__(self, user_id, name="", has_delivery=False, working_time=None, phone_number=""):
           self.user_id = user_id
           self.name = name
-          self.description = description
           self.has_delivery = has_delivery
           self.working_time = working_time
           self.phone_number = phone_number
@@ -131,6 +129,50 @@ class Seller(BASE):
       def __repr__(self):
           return "<Seller ({})>".format(self.user_id)
 Seller.__table__.create(checkfirst=True)
+
+def get_seller_by_user_id(user_id):
+    try:
+        return SESSION.query(Seller)\
+          .where(Seller.user_id == user_id)\
+          .first()
+    finally:
+        SESSION.close()
+
+def update_seller_name(user_id, text):
+  with INSERTION_LOCK:
+    seller = SESSION.query(Seller).get(user_id)
+    if seller:
+        seller.name = text
+        SESSION.commit()
+    SESSION.close()
+    return seller
+
+def update_seller_delivery(user_id, has_delivery):
+  with INSERTION_LOCK:
+    seller = SESSION.query(Seller).get(user_id)
+    if seller:
+        seller.has_delivery = has_delivery
+        SESSION.commit()
+    SESSION.close()
+    return seller
+
+def update_seller_working_time(user_id, text):
+  with INSERTION_LOCK:
+    seller = SESSION.query(Seller).get(user_id)
+    if seller:
+        seller.working_time = text
+        SESSION.commit()
+    SESSION.close()
+    return seller
+
+def update_seller_phone_number(user_id, text):
+  with INSERTION_LOCK:
+    seller = SESSION.query(Seller).get(user_id)
+    if seller:
+        seller.phone_number = text
+        SESSION.commit()
+    SESSION.close()
+    return seller
 
 def get_seller_by_product_id(product_id):
     product = get_product_by_id_no_verify(product_id)

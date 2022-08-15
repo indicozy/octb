@@ -64,7 +64,6 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     products = sql.get_product_sellers_by_subcategory(buyer_preps[user.id]['subcategory'].id)
     buyer_preps[user.id]['products'] = products
-    print(products)
 
     text = "\n".join([f"{index + 1}. {product.name}" for product, index in zip(products, range(len(products)))])
 
@@ -210,7 +209,6 @@ SEND_ADDRESS, = range(1)
 
 buy_seller_handler = ConversationHandler(
     entry_points=[
-            # CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
             CallbackQueryHandler(buy_seller_callback, pattern="^BUY_SELLER_")
         ],
     states={

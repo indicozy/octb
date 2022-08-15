@@ -155,7 +155,6 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     categories = sql.get_all_categories()
     product_preps[user.id]['categories'] = categories
-    print(categories)
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
 
     await update.message.reply_text(text)
@@ -169,7 +168,6 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     categories = sql.get_all_categories()
     product_preps[user.id]['categories'] = categories
-    print(categories)
     text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
     await update.message.reply_text(text)
 
@@ -231,8 +229,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         storage_folder = f'{STORAGE}/photos/product/'
 
-        print(product_preps[user.id]['category'])
-        print(product_preps[user.id]['categories'])
         post_text = generate_post(product_preps[user.id]['name'], product_preps[user.id]['description'],
                                     [product_preps[user.id]['product_type'].value, product_preps[user.id]['category'].name,
                                         product_preps[user.id]['subcategory'].name
