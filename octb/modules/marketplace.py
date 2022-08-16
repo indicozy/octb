@@ -207,7 +207,13 @@ async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         ]
     ) 
 
-    await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
+    if product.has_image:
+        await context.bot.edit_message_caption(
+            chat_id=seller_id, message_id=message_id,
+            caption=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
+    else:
+        await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
+
 
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,

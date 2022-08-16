@@ -4,7 +4,7 @@ def star_generate(num):
     empty = '☆'
     text = ''
     for i in range(5):
-        if i+1 < num:
+        if i+1 <= num:
             text += full
         elif i+0.5 <= num:
             text += half

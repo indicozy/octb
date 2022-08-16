@@ -447,5 +447,7 @@ def get_reviews_by_product_id(product_id):
     query_sum = 0
     for product in query:
         query_sum += product.points
+    if query_count == 0:
+        return 0, 0
     query_sum /= query_count
     return query_sum, query_count
