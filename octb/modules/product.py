@@ -444,8 +444,14 @@ async def inform_seller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             ]
         ]
     ) 
+    if item.has_image:
+        storage_folder = f'{STORAGE}/photos/product/'
+        await context.bot.send_photo(
+            photo=open(f"{storage_folder}{item.id}.jpg", 'rb'),
+            chat_id=item.seller_id, caption=f"Ваш продукт хотят купить!\n\n" + generate_post_product(item), reply_markup=menu)
+    else:
+        await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post_product(item), reply_markup=menu)
 
-    await context.bot.send_message(chat_id=item.seller_id, text=f"Ваш продукт хотят купить!\n\n" + generate_post_product(item), reply_markup=menu)
 
 async def item_sell(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""

@@ -14,6 +14,9 @@ bought_preps = {}
 
 __mod_name__ = "marketplace"
 
+from decouple import config
+STORAGE=config('STORAGE')
+
 async def marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
     user = update.message.from_user
@@ -93,10 +96,19 @@ async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         [InlineKeyboardButton("Оставить Оценку", callback_data="REVIEW_" + str(product.id))],
         ]) 
 
-    await update.message.reply_text(
-        generate_post_product(product),
-        reply_markup=menu
-    )
+    if product.has_image:
+        storage_folder = f'{STORAGE}/photos/product/'
+        await update.message.reply_photo(
+            photo=open(f"{storage_folder}{product.id}.jpg", 'rb'),
+            caption=generate_post_product(product),
+            reply_markup=menu
+        )
+    else:
+        await update.message.reply_text(
+            generate_post_product(product),
+            reply_markup=menu
+        )
+
 
     return ConversationHandler.END
 
@@ -133,7 +145,14 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         ]
     ) 
 
-    message_seller = await context.bot.send_message(chat_id=seller.user_id, text=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
+    if item.has_image:
+        storage_folder = f'{STORAGE}/photos/product/'
+        message_seller = await context.bot.send_photo(
+            photo=open(f"{storage_folder}{item.id}.jpg", 'rb'),
+            chat_id=seller.user_id, caption=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
+    else:
+        message_seller = await context.bot.send_message(chat_id=seller.user_id, text=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
+
 
     sql.add_buyer(product_id, user.id, message_id=message_seller.id)
     bought_preps[user.id] = {}
