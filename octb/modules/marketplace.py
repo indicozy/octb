@@ -93,7 +93,6 @@ async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     menu = InlineKeyboardMarkup([
         [InlineKeyboardButton("Купить", callback_data="BUY_SELLER_" + str(product.id))],
-        [InlineKeyboardButton("Оставить Оценку", callback_data="REVIEW_" + str(product.id))],
         ]) 
 
     if product.has_image:
@@ -139,9 +138,6 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             [
                 InlineKeyboardButton("Контакты", url=f"tg://user?id={user.id}"),
             ],
-            [
-                InlineKeyboardButton("Закрыть Объявление", callback_data=f"SOLD_{product_id}"),
-            ]
         ]
     ) 
 
@@ -199,12 +195,18 @@ async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         ]
     ) 
 
+    buyer_menu = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Оставить Оценку", callback_data="REVIEW_" + str(product.id))],
+            # [InlineKeyboardButton("Отменить Покупку", callback_data="REVIEW_" + str(product.id))],
+        ]
+    ) 
 
     await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
 
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,
-    text="Адрес принят. Ожидайте заказа!")
+    text="Адрес принят. Ожидайте заказа!", reply_markup=buyer_menu)
     return ConversationHandler.END
 
 CATEGORY, SUBCATEGORY, PRODUCT = range(3)
@@ -240,23 +242,5 @@ buy_seller_handler = ConversationHandler(
     },
     fallbacks=[CommandHandler("cancel", cancel)],
 )
-
-# REVIEW_POINTS, REVIEW_DESCRIPTION = range(2)
-
-# buy_seller_handler = ConversationHandler(
-#     entry_points=[
-#             # CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
-#             CallbackQueryHandler(buy_seller_callback, pattern="^REVIEW_")
-#         ],
-#     states={
-#         REVIEW_POINTS: [
-#             MessageHandler(~filters.COMMAND & filters.TEXT, review_points),
-#             ],
-#         REVIEW_DESCRIPTION: [
-#             MessageHandler(~filters.COMMAND & filters.TEXT, review_description),
-#             ],
-#     },
-#     fallbacks=[CommandHandler("cancel", cancel)],
-# )
 
 application.add_handlers([marketplace, buy_seller_handler])

@@ -291,7 +291,6 @@ class Product_buyer(BASE):
 
       def __repr__(self):
           return "<Product Buyer {} ({})>".format(self.id, self.buyer_id)
-
 Product_buyer.__table__.create(checkfirst=True)
 
 def add_buyer(product_id, buyer_id, message_id=None):
@@ -395,23 +394,27 @@ class Review(BASE):
 
       product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
       user_id = Column(Integer, nullable=False) 
+
+      points = Column(Integer, nullable=False) 
       description = Column(String(4096), default="")
 
       created_at = Column(DateTime(timezone=True), server_default=func.now())
       updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-      def __init__(self, product_id, user_id, description=""):
+      def __init__(self, product_id, user_id, points, description=""):
         self.product_id = product_id 
         self.user_id = user_id 
+        self.points = points 
         self.description = description
 
       def __repr__(self):
           return "<Review {}>".format(self.id)
+Review.__table__.create(checkfirst=True)
 
 
-def add_review(product_id, user_id, description=""):
+def add_review(product_id, user_id, points, description=""):
     with INSERTION_LOCK:
-        review = Review(product_id, user_id, description=description)
+        review = Review(product_id, user_id, points, description=description)
         SESSION.add(review)
         SESSION.flush()
         SESSION.commit()
