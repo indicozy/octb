@@ -5,6 +5,7 @@ import octb.modules.sql.product as sql
 from octb import LOGGER
 from octb.modules.helpers.product import generate_post_product
 from octb.modules.helpers.base import generate_post
+from octb.modules.helpers.review import star_generate
 
 from octb import application
 
@@ -66,6 +67,11 @@ async def review_description(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     sql.add_review(review_preps[user.id]["product"].id, user.id,
                    points=review_preps[user.id]["points"], description=review_preps[user.id]["description"])
+
+    message_seller = await context.bot.send_message(chat_id=review_preps[user.id]["product"].seller_id,
+                                                    text=f"У вас новая рецензия!\n\n{star_generate(review_preps[user.id]['points'])}\n"
+                                                    f"{review_preps[user.id]['description']}"
+                                                    )
 
     await update.message.reply_text( #TODO add edit context for photos
         text=f"Спасибо за ответ!"
