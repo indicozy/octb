@@ -115,16 +115,18 @@ class Seller(BASE):
       has_delivery = Column(Boolean, default=False)
       working_time = Column(String(32), default="")
       phone_number = Column(String(32), default="")
+      instant_message = Column(String(2096), nullable=True)
 
       created_at = Column(DateTime(timezone=True), server_default=func.now())
       updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-      def __init__(self, user_id, name="", has_delivery=False, working_time=None, phone_number=""):
+      def __init__(self, user_id, name="", has_delivery=False, working_time=None, phone_number="", instant_message=None):
           self.user_id = user_id
           self.name = name
           self.has_delivery = has_delivery
           self.working_time = working_time
           self.phone_number = phone_number
+          self.instant_message = instant_message
 
       def __repr__(self):
           return "<Seller ({})>".format(self.user_id)
@@ -170,6 +172,15 @@ def update_seller_phone_number(user_id, text):
     seller = SESSION.query(Seller).get(user_id)
     if seller:
         seller.phone_number = text
+        SESSION.commit()
+    SESSION.close()
+    return seller
+
+def update_seller_instant_message(user_id, text):
+  with INSERTION_LOCK:
+    seller = SESSION.query(Seller).get(user_id)
+    if seller:
+        seller.instant_message = text
         SESSION.commit()
     SESSION.close()
     return seller

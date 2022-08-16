@@ -161,6 +161,27 @@ async def edit_seller_phone_number_text(update: Update, context:ContextTypes.DEF
     await edit_seller(update, context)
     return ConversationHandler.END
 
+async def edit_seller_instant_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    LOGGER.info("callback of %s: %s", user.id, text)
+
+    await query.answer()
+    await context.bot.send_message( chat_id=user.id,
+            text="Напишите мгновенное сообщение магазина, для отмены пишите 'Отмена'")
+    return EDIT_PHONE_NUMBER
+
+async def edit_seller_instant_message_text(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    text = update.message.text
+    if text.lower() != 'отмена':
+        sql.update_seller_instant_message(user.id, text)
+    await edit_seller(update, context)
+    return ConversationHandler.END
+
 async def edit_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     text = update.message.text
@@ -179,6 +200,9 @@ async def edit_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("Время Работы", callback_data="SELLER_TIME"),
             InlineKeyboardButton("Номер Телефона", callback_data="SELLER_NUMBER")
+            ],
+        [
+            InlineKeyboardButton("Мгновенное сообщение", callback_data="SELLER_MESSAGE"),
             ],
         ]) 
     
@@ -251,12 +275,25 @@ edit_seller_phone_number_handler = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancel)],
 )
 
+edit_seller_instant_message_handler = ConversationHandler(
+    entry_points=[
+            CallbackQueryHandler(edit_seller_instant_message, pattern="^" + "SELLER_MESSAGE" + "$")
+        ],
+    states={
+        EDIT_PHONE_NUMBER: [
+            MessageHandler(~filters.COMMAND & filters.TEXT, edit_seller_instant_message_text),
+            ],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
 edit_seller_handlers = [
     edit_seller_handler,
     edit_seller_name_handler,
     edit_seller_delivery_handler,
     edit_seller_working_time_handler,
     edit_seller_phone_number_handler,
+    edit_seller_instant_message_handler,
 ]
 
 application.add_handlers([add_seller_handler, remove_seller_handler] + edit_seller_handlers)

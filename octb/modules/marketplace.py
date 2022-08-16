@@ -153,7 +153,6 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         message_seller = await context.bot.send_message(chat_id=seller.user_id, text=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
 
-
     sql.add_buyer(product_id, user.id, message_id=message_seller.id)
     bought_preps[user.id] = {}
     bought_preps[user.id]["seller_id"] = seller.user_id
@@ -168,9 +167,12 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await query.answer()
 
+    instant_message = f'Сообщение от продавца:\n{seller.instant_message}\n\n' if seller.instant_message else ''
+
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,
         text=f"Вы покупаете:\n{item.name}\nЦена: {item.price}\n\nПродавец: {seller.name}\nВремя работы: {seller.working_time}\nДоставка: {'есть' if seller.has_delivery else 'нету'}\nТелефон: {seller.phone_number}\n\n"
+        f"{instant_message}"
         f"Напишите свой адрес или напишите 'Нет адреса' для доставки.", reply_markup=menu)
     return SEND_ADDRESS
 
