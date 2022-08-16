@@ -300,6 +300,12 @@ def add_buyer(product_id, buyer_id, message_id=None):
         SESSION.flush()
         SESSION.commit()
 
+def get_buyer_count_by_product_id(product_id):
+    query = SESSION.query(Product_buyer)\
+            .where(Product_buyer.product_id==product_id).all()
+    query_count = len(query)
+    return query_count
+
 def add_product(message_id, product_type, name, description, price, seller_id, subcategory, has_image):
     with INSERTION_LOCK:
         product = Product(name, has_image, description, product_type, price, seller_id, subcategory, message_id)
@@ -413,10 +419,18 @@ Review.__table__.create(checkfirst=True)
 
 
 def add_review(product_id, user_id, points, description=""):
+    query = SESSION.query(Review)\
+        .where(Review.product_id==product_id)\
+        .where(Review.user_id==user_id).all()
+    print(query)
     with INSERTION_LOCK:
-        review = Review(product_id, user_id, points, description=description)
-        SESSION.add(review)
-        SESSION.flush()
+        if len(query) == 0:
+            review = Review(product_id, user_id, points, description=description)
+            SESSION.add(review)
+        else:
+            review = query[0]
+            review.points = points
+            review.description = description
         SESSION.commit()
     return review
 
@@ -425,3 +439,13 @@ def get_reviews_to_user(user_id): # review -> product -> user
     query = SESSION.query(Reviews)\
             .where(Review.product_id.in_([product.id for product in products]))
     return query.all()
+
+def get_reviews_by_product_id(product_id):
+    query = SESSION.query(Review)\
+            .where(Review.product_id==product_id).all()
+    query_count = len(query)
+    query_sum = 0
+    for product in query:
+        query_sum += product.points
+    query_sum /= query_count
+    return query_sum, query_count
