@@ -171,9 +171,10 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,
-        text=f"Вы покупаете:\n{item.name}\nЦена: {item.price}\n\nПродавец: {seller.name}\nВремя работы: {seller.working_time}\nДоставка: {'есть' if seller.has_delivery else 'нету'}\nТелефон: {seller.phone_number}\n\n"
+        text=f"Вы покупаете:\n{item.name}\nЦена: {item.price}\n\nПродавец: {seller.name}\nВремя работы: {seller.working_time}\nДоставка: {'есть' if seller.has_delivery else 'нету'}\nТелефон: {seller.phone_number}\nСсылка на паблик: {seller.link}\n\n"
         f"{instant_message}"
-        f"Напишите свой адрес или напишите 'Нет адреса' для доставки.", reply_markup=menu)
+        f"Напишите свой адрес или напишите 'Нет адреса' для доставки.",
+        reply_markup=menu)
     return SEND_ADDRESS
 
 async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

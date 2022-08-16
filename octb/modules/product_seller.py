@@ -182,6 +182,27 @@ async def edit_seller_instant_message_text(update: Update, context:ContextTypes.
     await edit_seller(update, context)
     return ConversationHandler.END
 
+async def edit_seller_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the selected gender and asks for a photo."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    text = query.data
+    LOGGER.info("callback of %s: %s", user.id, text)
+
+    await query.answer()
+    await context.bot.send_message( chat_id=user.id,
+            text="Напишите ссылку на страницу (@название_канала или ссылку) магазина, для отмены пишите 'Отмена'")
+    return EDIT_PHONE_NUMBER
+
+async def edit_seller_link_text(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    text = update.message.text
+    if text.lower() != 'отмена':
+        sql.update_seller_link(user.id, text)
+    await edit_seller(update, context)
+    return ConversationHandler.END
+
 async def edit_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     text = update.message.text
@@ -203,11 +224,13 @@ async def edit_seller(update: Update, context:ContextTypes.DEFAULT_TYPE):
             ],
         [
             InlineKeyboardButton("Мгновенное сообщение", callback_data="SELLER_MESSAGE"),
+            InlineKeyboardButton("Страница паблика", callback_data="SELLER_LINK"),
             ],
         ]) 
     
     await update.message.reply_text(text=f"Название: {seller.name}\nДоставка:{'есть' if seller.has_delivery else 'нету'}\n"
-                                        f"Время Работы: {seller.working_time}\nТелефон(Kaspi): {seller.phone_number}"
+                                        f"Время Работы: {seller.working_time}\nТелефон(Kaspi): {seller.phone_number}\n"
+                                        f"Мгновенное сообщение: {seller.instant_message}\nСсылка на паблик: {seller.link}"
                                     , reply_markup=menu)
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -287,6 +310,18 @@ edit_seller_instant_message_handler = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancel)],
 )
 
+edit_seller_link_handler = ConversationHandler(
+    entry_points=[
+            CallbackQueryHandler(edit_seller_link, pattern="^" + "SELLER_LINK" + "$")
+        ],
+    states={
+        EDIT_PHONE_NUMBER: [
+            MessageHandler(~filters.COMMAND & filters.TEXT, edit_seller_link_text),
+            ],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
 edit_seller_handlers = [
     edit_seller_handler,
     edit_seller_name_handler,
@@ -294,6 +329,7 @@ edit_seller_handlers = [
     edit_seller_working_time_handler,
     edit_seller_phone_number_handler,
     edit_seller_instant_message_handler,
+    edit_seller_link_handler,
 ]
 
 application.add_handlers([add_seller_handler, remove_seller_handler] + edit_seller_handlers)
