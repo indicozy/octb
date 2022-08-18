@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime, BigInteger
 from octb.modules.sql import BASE, SESSION
 
 class User(BASE):
@@ -27,9 +27,8 @@ def update_user(user_id, username):
   with INSERTION_LOCK:
     user = SESSION.query(User).get(user_id)
     if not user:
-      user = User(user_id, username)
+      user = User(user_id, username=username)
       SESSION.add(user)
-      SESSION.flush()
     else:
       user.username = username
     SESSION.commit()

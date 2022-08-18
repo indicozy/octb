@@ -110,7 +110,7 @@ class Seller(BASE):
       __tablename__ = "seller"
 
       user_id = Column(Integer, primary_key=True)
-        
+    
       name = Column(String(256), default="")
       has_delivery = Column(Boolean, default=False)
       working_time = Column(String(32), default="")

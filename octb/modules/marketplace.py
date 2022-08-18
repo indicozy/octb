@@ -73,7 +73,7 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     for product, index in zip(products, range(len(products))):
         reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
         bought_amount = sql.get_buyer_count_by_product_id(product.id)
-        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} ({bought_amount})" 
+        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name}" 
 
     await update.message.reply_text(
         text

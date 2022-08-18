@@ -1,6 +1,6 @@
 def star_generate(num):
     full = '★'
-    half = '⯨'
+    half = '✫'
     empty = '☆'
     text = ''
     for i in range(5):
