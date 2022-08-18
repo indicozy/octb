@@ -18,6 +18,9 @@ __mod_name__ = "marketplace"
 from decouple import config
 STORAGE=config('STORAGE')
 
+def TEXT_GOT_SELLER(product, info):
+    return f"У вас есть покупатель!\n\n{product}\n\nАдрес: {info}"
+
 async def marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
     user = update.message.from_user
@@ -150,9 +153,9 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         storage_folder = f'{STORAGE}/photos/product/'
         message_seller = await context.bot.send_photo(
             photo=open(f"{storage_folder}{item.id}.jpg", 'rb'),
-            chat_id=seller.user_id, caption=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
+            chat_id=seller.user_id, caption=TEXT_GOT_SELLER(item, 'неизвестно'), reply_markup=seller_menu)
     else:
-        message_seller = await context.bot.send_message(chat_id=seller.user_id, text=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
+        message_seller = await context.bot.send_message(chat_id=seller.user_id, text=TEXT_GOT_SELLER(item, 'неизвестно'), reply_markup=seller_menu)
 
     sql.add_buyer(product_id, user.id, message_id=message_seller.id)
     bought_preps[user.id] = {}
@@ -162,7 +165,7 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     menu = ReplyKeyboardMarkup([
         [
-            'Нет адреса',
+            'Нет данных',
         ]
     ], one_time_keyboard=True)
 
@@ -174,7 +177,7 @@ async def buy_seller_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_id=user.id,
         text=f"Вы покупаете:\n{item.name}\nЦена: {item.price}\n\nПродавец: {seller.name}\nВремя работы: {seller.working_time}\nДоставка: {'есть' if seller.has_delivery else 'нету'}\nТелефон: {seller.phone_number}\nСсылка на паблик: {seller.link}\n\n"
         f"{instant_message}"
-        f"Напишите свой адрес или напишите 'Нет адреса' для доставки.",
+        f"Напишите информацию о себе (Адрес, имя, кол-во продуктов) или напишите 'Нет данных' для доставки.",
         reply_markup=menu)
     return SEND_ADDRESS
 
@@ -210,14 +213,14 @@ async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     if product.has_image:
         await context.bot.edit_message_caption(
             chat_id=seller_id, message_id=message_id,
-            caption=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
+            caption=TEXT_GOT_SELLER(product, user_text), reply_markup=seller_menu)
     else:
-        await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {user_text}", reply_markup=seller_menu)
+        await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=TEXT_GOT_SELLER(product, user_text), reply_markup=seller_menu)
 
 
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,
-    text="Адрес принят. Ожидайте заказа!", reply_markup=buyer_menu)
+    text="Данные приняты. Ожидайте заказа!", reply_markup=buyer_menu)
     return ConversationHandler.END
 
 CATEGORY, SUBCATEGORY, PRODUCT = range(3)

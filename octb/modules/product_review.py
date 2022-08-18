@@ -83,8 +83,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s canceled the conversation.", user.first_name)
 
-    message_seller = await context.bot.send_message(chat_id=seller.user_id, text=f"У вас есть покупатель!\n\n{item.name}\n\nАдрес: неизвестно", reply_markup=seller_menu)
-
     await update.message.reply_text(
         "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
     )

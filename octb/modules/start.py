@@ -22,7 +22,7 @@ async def default_reply(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
 # handlers
 startHandler = CommandHandler('start', start, filters=filters.ChatType.PRIVATE)
-show_id_handler = CommandHandler('id', show_id, filters=filters.ChatType.PRIVATE)
+show_id_handler = CommandHandler('id', show_id)
 private_default = MessageHandler(filters.ALL & filters.ChatType.PRIVATE, default_reply)
 
 application.add_handlers([startHandler,show_id_handler, private_default])
