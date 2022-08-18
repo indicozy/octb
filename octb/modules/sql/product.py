@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean, Enum, DateTime
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, Boolean, Enum, DateTime, BigInteger
 from octb.modules.sql import BASE, SESSION
 
 from octb.modules.sql.user import User # needed for Foreignkey, do not delete
@@ -109,7 +109,7 @@ def add_subcategory(subcategory, category_id):
 class Seller(BASE):
       __tablename__ = "seller"
 
-      user_id = Column(Integer, primary_key=True)
+      user_id = Column(BigInteger, primary_key=True)
     
       name = Column(String(256), default="")
       has_delivery = Column(Boolean, default=False)
@@ -239,7 +239,7 @@ class Product(BASE):
       __tablename__ = "product"
 
       id = Column(Integer, primary_key=True, autoincrement=True)
-      seller_id = Column(Integer, nullable=False)
+      seller_id = Column(BigInteger, nullable=False)
       subcategory_id = Column(Integer, ForeignKey("subcategory.id"), nullable=False)
       message_id = Column(Integer, nullable=False, unique=True)
 
@@ -278,7 +278,7 @@ class Product_buyer(BASE):
       id = Column(Integer, primary_key=True, autoincrement=True)
 
       product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
-      buyer_id = Column(Integer, nullable=False) # user.id
+      buyer_id = Column(BigInteger, nullable=False) # user.id
       message_id = Column(Integer, nullable=True)
 
       created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -399,7 +399,7 @@ class Review(BASE):
       id = Column(Integer, primary_key=True, autoincrement=True)
 
       product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
-      user_id = Column(Integer, nullable=False) 
+      user_id = Column(BigInteger, nullable=False) 
 
       points = Column(Integer, nullable=False) 
       description = Column(String(4096), default="")

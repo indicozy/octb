@@ -1,7 +1,7 @@
 
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime, BigInteger
 from octb.modules.sql import BASE, SESSION
 
 class Event(BASE):
@@ -13,7 +13,7 @@ class Event(BASE):
       description = Column(String(10000), nullable=False)
       link = Column(String(2048), nullable=False)
 
-      creator_id = Column(Integer, nullable=False)
+      creator_id = Column(BigInteger, nullable=False)
 
       organizer = Column(String(64), nullable=False)
       location = Column(String(64), nullable=False)

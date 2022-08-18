@@ -6,7 +6,7 @@ from octb.modules.sql import BASE, SESSION
 class User(BASE):
       __tablename__ = "user"
 
-      user_id = Column(Integer, primary_key=True)
+      user_id = Column(BigInteger, primary_key=True)
       username = Column(UnicodeText)
 
       created_at = Column(DateTime(timezone=True), server_default=func.now())
