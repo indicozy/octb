@@ -4,13 +4,12 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 import octb.modules.sql.product as sql
 from octb import LOGGER
 from octb.modules.helpers.product import generate_post_product
-from octb.modules.helpers.base import generate_post
 from octb.modules.helpers.review import star_generate
+from octb.modules.helpers.base import generate_post, generate_menu
 
 from octb import application
 
 # TODO add redis
-buyer_preps = {}
 bought_preps = {}
 
 __mod_name__ = "marketplace"
@@ -24,95 +23,115 @@ def TEXT_GOT_SELLER(product, info):
 async def marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
     user = update.message.from_user
-    buyer_preps[user.id] = {}
 
     categories = sql.get_all_categories()
-    buyer_preps[user.id]['categories'] = categories
-    text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
+    # text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
+    text = "Выберите категорию:"
+
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{category.name}",
+                                    callback_data="MARKETPLACE_CATEGORY_" + str(category.id)) for category, index in zip(categories, range(len(categories)))])
+                                )
 
     await update.message.reply_text(
-        text
+        text, reply_markup=menu
     )
 
-    return CATEGORY
+async def marketplace_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the conversation and asks the user about their gender."""
+    query = update.callback_query
+
+    user = update.callback_query.from_user
+    user_text = query.data
+
+    categories = sql.get_all_categories()
+    # text = "\n".join([f"{index + 1}. {category.name}" for category, index in zip(categories, range(len(categories)))])
+    text = "Выберите категорию:"
+
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{category.name}",
+                                    callback_data="MARKETPLACE_CATEGORY_" + str(category.id)) for category, index in zip(categories, range(len(categories)))])
+                                )
+
+    await query.edit_message_text(
+        text, reply_markup=menu
+    )
 
 async def category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
-    user = update.message.from_user
-    user_text = update.message.text
+    query = update.callback_query
 
-    if not user_text.isdigit():
-        await update.message.reply_text("выберите число")
-        return CATEGORY
+    user = update.callback_query.from_user
+    user_text = query.data
+    category_id = user_text.replace("MARKETPLACE_CATEGORY_", "")
+    category = sql.get_category_by_id(category_id)
 
-    buyer_preps[user.id]['category'] =  buyer_preps[user.id]['categories'][int(user_text) - 1]
+    subcategories = sql.get_subcategories_by_category_id(int(category_id))
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{subcategory.name}",
+                                    callback_data="MARKETPLACE_SUBCATEGORY_" + str(subcategory.id)) for subcategory, index in zip(subcategories, range(len(subcategories)))])
+                                    + [[InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_START")]]
+                                )
 
-    subcategories = sql.get_subcategories_by_category_id(int(user_text))
-    buyer_preps[user.id]['subcategories'] = subcategories
+    # text = "\n".join([f"{index + 1}. {subcategory.name}" for subcategory, index in zip(subcategories, range(len(subcategories)))])
+    text = f"Категория: {category.name}\n\nВыберите подкатегорию:"
 
-    text = "\n".join([f"{index + 1}. {subcategory.name}" for subcategory, index in zip(subcategories, range(len(subcategories)))])
-
-    await update.message.reply_text(
-        text
+    await query.edit_message_text(
+        text=text,
+        reply_markup=menu
     )
-
-    return SUBCATEGORY
 
 async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
-    user = update.message.from_user
-    user_text = update.message.text
+    query = update.callback_query
 
-    if not user_text.isdigit():
-        await update.message.reply_text("выберите число")
-        return SUBCATEGORY
+    user = update.callback_query.from_user
+    user_text = query.data
+    subcategory_id = user_text.replace("MARKETPLACE_SUBCATEGORY_", "")
 
-    buyer_preps[user.id]['subcategory'] =  buyer_preps[user.id]['subcategories'][int(user_text) - 1]
+    subcategory = sql.get_subcategory_by_id(subcategory_id)
+    products = sql.get_product_sellers_by_subcategory(int(subcategory_id))
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{product.name}",
+                                    callback_data="MARKETPLACE_PRODUCT_" + str(product.id)) for product, index in zip(products, range(len(products)))])
+                                    + [[InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_CATEGORY_" + str(subcategory.category_id))]]
+                                )
 
-    products = sql.get_product_sellers_by_subcategory(buyer_preps[user.id]['subcategory'].id)
-    buyer_preps[user.id]['products'] = products
+    text = f"Подкатегория: {subcategory.name}\n\nВыберите товар:"
+    # for product, index in zip(products, range(len(products))):
+    #     reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
+    #     bought_amount = sql.get_buyer_count_by_product_id(product.id)
+    #     text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name}" 
 
-    text = "Выберите товар:\n"
-    for product, index in zip(products, range(len(products))):
-        reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
-        bought_amount = sql.get_buyer_count_by_product_id(product.id)
-        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name}" 
-
-    await update.message.reply_text(
-        text
+    await query.edit_message_text(
+        text,
+        reply_markup=menu
     )
-
-    return PRODUCT
 
 async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
-    user = update.message.from_user
-    user_text = update.message.text
+    query = update.callback_query
+    await query.delete_message()
 
-    if not user_text.isdigit():
-        await update.message.reply_text("выберите число")
-        return PRODUCT
+    user = update.callback_query.from_user
+    user_text = query.data
+    product_id = user_text.replace("MARKETPLACE_PRODUCT_", "")
 
-    buyer_preps[user.id]['product'] =  buyer_preps[user.id]['products'][int(user_text) - 1]
-
-    product = sql.get_product_by_id_no_verify(buyer_preps[user.id]['product'].id)
-
-    buyer_preps.pop(user.id) # TODO try except
+    product = sql.get_product_by_id_no_verify(int(product_id))
 
     menu = InlineKeyboardMarkup([
         [InlineKeyboardButton("Купить", callback_data="BUY_SELLER_" + str(product.id))],
+        [InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_SUBCATEGORY_" + str(product.subcategory_id))],
         ]) 
 
     if product.has_image:
         storage_folder = f'{STORAGE}/photos/product/'
-        await update.message.reply_photo(
+        await context.bot.send_message(
+            chat_id=user.id,
             photo=open(f"{storage_folder}{product.id}.jpg", 'rb'),
             caption=generate_post_product(product),
             reply_markup=menu
         )
     else:
-        await update.message.reply_text(
-            generate_post_product(product),
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=generate_post_product(product),
             reply_markup=menu
         )
 
@@ -223,26 +242,22 @@ async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     text="Данные приняты. Ожидайте заказа!", reply_markup=buyer_menu)
     return ConversationHandler.END
 
-CATEGORY, SUBCATEGORY, PRODUCT = range(3)
-
 # main
-marketplace = ConversationHandler(
-    entry_points=[
-            # CallbackQueryHandler(new_product, pattern="^" + "PRODUCT_NEW" + "$"),
-            MessageHandler(filters.TEXT & filters.Regex('^Магазин$') & filters.ChatType.PRIVATE, marketplace),
-            CommandHandler("marketplace", marketplace, filters=filters.ChatType.PRIVATE),
-        ],
-    states={
-        CATEGORY: [
-            MessageHandler(~filters.COMMAND & filters.TEXT, category)],
-        SUBCATEGORY: [
-            MessageHandler(~filters.COMMAND & filters.TEXT, subcategory)],
-        PRODUCT: [
-            MessageHandler(~filters.COMMAND & filters.TEXT, product),
-            ],
-    },
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
+marketplace_start_1 = MessageHandler(filters.TEXT & filters.Regex('^Магазин$') & filters.ChatType.PRIVATE, marketplace)
+marketplace_start_2 = CommandHandler("marketplace", marketplace, filters=filters.ChatType.PRIVATE)
+marketplace_start_3 = CallbackQueryHandler(marketplace_callback, pattern="^" + "MARKETPLACE_START")
+marketplace_category = CallbackQueryHandler(category, pattern="^" + "MARKETPLACE_CATEGORY_")
+marketplace_subcategory = CallbackQueryHandler(subcategory, pattern="^" + "MARKETPLACE_SUBCATEGORY_")
+marketplace_product = CallbackQueryHandler(product, pattern="^" + "MARKETPLACE_PRODUCT_")
+marketplace_handlers = [
+    marketplace_start_1,
+    marketplace_start_2,
+    marketplace_start_3,
+    marketplace_category,
+    marketplace_subcategory,
+    marketplace_product,
+]
+
 SEND_ADDRESS, = range(1)
 
 buy_seller_handler = ConversationHandler(
@@ -257,4 +272,4 @@ buy_seller_handler = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancel)],
 )
 
-application.add_handlers([marketplace, buy_seller_handler])
+application.add_handlers([buy_seller_handler] + marketplace_handlers)

@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 import octb.modules.sql.product as sql
 from octb import LOGGER
 from octb.modules.helpers.product import generate_post_product
-from octb.modules.helpers.base import generate_post
+from octb.modules.helpers.base import generate_post, generate_menu
 
 from octb import application
 
@@ -279,19 +279,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def item_menu_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    def generate_menu(items):
-        menu_new = [
-            [],
-        ]
-
-        for i in items:
-            if len(menu_new[-1]) >= 3:
-                menu_new.append([i]) 
-            else:
-                menu_new[-1].append(i)
-        return menu_new
-
-
     if update.callback_query:
         query = update.callback_query
 
