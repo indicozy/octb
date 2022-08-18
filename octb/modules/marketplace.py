@@ -88,16 +88,16 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     subcategory = sql.get_subcategory_by_id(subcategory_id)
     products = sql.get_product_sellers_by_subcategory(int(subcategory_id))
-    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{product.name}",
+    menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{index + 1}",
                                     callback_data="MARKETPLACE_PRODUCT_" + str(product.id)) for product, index in zip(products, range(len(products)))])
                                     + [[InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_CATEGORY_" + str(subcategory.category_id))]]
                                 )
 
-    text = f"Подкатегория: {subcategory.name}\n\nВыберите товар:"
-    # for product, index in zip(products, range(len(products))):
-    #     reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
-    #     bought_amount = sql.get_buyer_count_by_product_id(product.id)
-    #     text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name}" 
+    text = f"Подкатегория: {subcategory.name}\n\nВыберите товар:\n"
+    for product, index in zip(products, range(len(products))):
+        reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
+        bought_amount = sql.get_buyer_count_by_product_id(product.id)
+        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} {product.price}₸" 
 
     await query.edit_message_text(
         text,
