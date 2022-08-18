@@ -19,7 +19,7 @@ from decouple import config
 STORAGE=config('STORAGE')
 
 def TEXT_GOT_SELLER(product, info):
-    return f"У вас есть покупатель!\n\n{product}\n\nАдрес: {info}"
+    return f"У вас есть покупатель!\n\n{product.name}\n\nАдрес: {info}"
 
 async def marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""

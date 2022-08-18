@@ -28,9 +28,20 @@ async def review_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     await query.answer()
 
+    menu = ReplyKeyboardMarkup([
+        [
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+        ]
+    ], one_time_keyboard=True)
+
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,
-        text=f"Вы оставляете оценку:\n{item.name}\nПродавец:\n{seller.name}. Поставьте оценку от 1-5 ниже, для отмены напишите /cancel:"
+        text=f"Вы оставляете оценку:\n{item.name}\nПродавец:\n{seller.name}. Поставьте оценку от 1-5 ниже, для отмены напишите /cancel:",
+        reply_markup=menu
         )
     return REVIEW_POINTS
 
