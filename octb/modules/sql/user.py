@@ -23,6 +23,13 @@ User.__table__.create(checkfirst=True)
 
 INSERTION_LOCK = threading.RLock()
 
+def get_users_all():
+  try:
+    return SESSION.query(User)\
+      .all()
+  finally:
+      SESSION.close()
+
 def update_user(user_id, username):
   with INSERTION_LOCK:
     user = SESSION.query(User).get(user_id)
