@@ -47,7 +47,9 @@ def generate_folders():
         }
     }
     location_root=f"{STORAGE}"
-    generate_folder(location_root, folders_all)
+    folders_root = {}
+    folders_root[f"{STORAGE}"] = folders_all
+    generate_folder(location_root, folders_root)
 
 def main():
     generate_folders()
