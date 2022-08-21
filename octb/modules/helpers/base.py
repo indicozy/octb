@@ -20,7 +20,6 @@ def generate_post(headline, text, hashtags, args={}):
     args_text = "\n".join([f'{key}: {value}' for key, value in args.items()])
     return f"""{hashtags_text}
 {headline}
-
 {text}
 
 {args_text}

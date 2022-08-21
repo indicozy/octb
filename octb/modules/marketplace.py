@@ -93,21 +93,32 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
                                     + [[InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_CATEGORY_" + str(subcategory.category_id))]]
                                 )
 
-    text = f"Подкатегория: {subcategory.name}\n\nВыберите товар:\n"
-    for product, index in zip(products, range(len(products))):
-        reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
-        bought_amount = sql.get_buyer_count_by_product_id(product.id)
-        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} {product.price if not product.price.isdigit() else product.price+'тг'}\n" 
+    text = f"Подкатегория: {subcategory.name}"
+    if len(products) == 0:
+        text += "\n\nПока нет товаров, но товары есть в других категориях." 
+    else:
+        text += "\n\nВыберите товар:\n"
+        for product, index in zip(products, range(len(products))):
+            reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
+            bought_amount = sql.get_buyer_count_by_product_id(product.id)
+            text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} {product.price if not product.price.isdigit() else product.price+'тг'}\n" 
 
-    await query.edit_message_text(
-        text,
-        reply_markup=menu
-    )
+    if query.message.caption:
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=text,
+            reply_markup=menu
+        )
+        await query.delete_message()
+    else:
+        await query.edit_message_text(
+            text,
+            reply_markup=menu
+        )
 
 async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their gender."""
     query = update.callback_query
-    await query.delete_message()
 
     user = update.callback_query.from_user
     user_text = query.data
@@ -134,6 +145,7 @@ async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             text=generate_post_product(product),
             reply_markup=menu
         )
+    await query.delete_message()
 
 
     return ConversationHandler.END
