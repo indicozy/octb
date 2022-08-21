@@ -97,7 +97,7 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     for product, index in zip(products, range(len(products))):
         reviews_sum, reviews_amount = sql.get_reviews_by_product_id(product.id)
         bought_amount = sql.get_buyer_count_by_product_id(product.id)
-        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} {product.price}₸" 
+        text += f"{index + 1}. {star_generate(reviews_sum)} ({reviews_amount}) {product.name} {product.price if not product.price.isdigit() else product.price+'тг'}\n" 
 
     await query.edit_message_text(
         text,
@@ -122,7 +122,7 @@ async def product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     if product.has_image:
         storage_folder = f'{STORAGE}/photos/product/'
-        await context.bot.send_message(
+        await context.bot.send_photo(
             chat_id=user.id,
             photo=open(f"{storage_folder}{product.id}.jpg", 'rb'),
             caption=generate_post_product(product),

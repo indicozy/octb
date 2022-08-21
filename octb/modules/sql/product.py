@@ -49,7 +49,13 @@ def get_subcategories_by_category_id(category_id):
         return SESSION.query(Subcategory).where(Subcategory.category_id == category_id).all()
     finally:
         SESSION.close()
-        
+
+def get_subcategory_by_name_and_category_id(name, category_id):
+    try:
+        return SESSION.query(Subcategory).where(Subcategory.name == name).where(Subcategory.category_id == category_id).first()
+    finally:
+        SESSION.close()
+
 def get_subcategory_by_id(subcategory_id):
     try:
         return SESSION.query(Subcategory).where(Subcategory.id == subcategory_id).first()
@@ -241,13 +247,13 @@ class Product(BASE):
       id = Column(Integer, primary_key=True, autoincrement=True)
       seller_id = Column(BigInteger, nullable=False)
       subcategory_id = Column(Integer, ForeignKey("subcategory.id"), nullable=False)
-      message_id = Column(Integer, nullable=False, unique=True)
+      message_id = Column(Integer, nullable=True, unique=True)
 
       name = Column(String(256), nullable=False)
       has_image = Column(Boolean, default=False)
-      description = Column(String(10000), nullable=False)
+      description = Column(String(10000), default="")
       product_type = Column(Enum(ProductTypeEnum))
-      price = Column(Integer, nullable=False)
+      price = Column(String, nullable=False)
 
       is_archived = Column(Boolean, default=False)
       is_sold = Column(Boolean, default=False)
@@ -311,6 +317,12 @@ def add_product(message_id, product_type, name, description, price, seller_id, s
         product = Product(name, has_image, description, product_type, price, seller_id, subcategory, message_id)
         SESSION.add(product)
         SESSION.flush()
+        SESSION.commit()
+    return product
+
+def add_product_by_obj(product):
+    with INSERTION_LOCK:
+        SESSION.add(product)
         SESSION.commit()
     return product
 

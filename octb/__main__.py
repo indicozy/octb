@@ -36,6 +36,9 @@ def generate_folders():
             if type(value) is dict:
                 generate_folder(path,value)
     folders_all = {
+        "files": {
+            "import": "import",
+            },
         "photos": {
             "product": "product",
             "temp": {

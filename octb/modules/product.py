@@ -130,7 +130,7 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("send price")
         return PRICE
 
-    product_preps[user.id]['price'] = int(text)
+    product_preps[user.id]['price'] = text
     
     await update.message.reply_text(
         "image"
