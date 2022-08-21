@@ -39,14 +39,14 @@ categories:
   Фастфуд:
     - Донеры
     - Боулы
-    - Рамен # sexify
     - Другое
   Напитки:
     - Энергетики # boost_energy
     - Чаи # boost_energy
     - Соки # boost_energy
     - Кола # boost_energy
-  Другие Продукты:
+  Еда:
+    - Рамен # sexify
     - Морепродукты # sexify
     - Другое
   # 21+ Алко:
