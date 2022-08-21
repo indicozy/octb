@@ -27,7 +27,15 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("У вас нет прав")
         return
 
+    command = user_text.split("\n")[0].split(" ")
+    if "-y" not in command:
+        await update.message.reply_text("Вы не подтвердили отправку с помощью -y")
+        return
+        
     text = "\n".join(user_text.split("\n")[1:])
+    if text == "":
+        await update.message.reply_text("Нет текста.")
+        return
 
     users = sql.get_users_all()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Отправляем сообщение:\n\n{text}\n\n{len(users)} пользователям...", reply_markup=buttons.BASE_BUTTONS)
