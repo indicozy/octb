@@ -4,6 +4,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 from octb.modules.buttons import base as buttons
 import octb.modules.sql.product as sql
 from octb.modules.sql.product import Product
+from octb import LOGGER
 import asyncio
 
 from octb import application
@@ -36,7 +37,7 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("/import_bulk -y USER_ID")
         return
 
-    seller_id = command[2]
+    seller_id = int(command[2])
 
     message_replied = update.message.reply_to_message
     file_name = f"{seller_id}.{message_replied.document.file_name.split('.')[-1]}"
@@ -72,14 +73,18 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     products = []
     for i in range(2, m_row + 1):
+        print(i)
+        if not sheet_obj.cell(row = i, column = 1).value:
+            LOGGER.info("id not found, continuing")
+            continue
         info = {
-            "id": sheet_obj.cell(row = i, column = 1).value,
-            "name": sheet_obj.cell(row = i, column = 2).value,
-            "description": sheet_obj.cell(row = i, column = 3).value,
-            "product_type": sheet_obj.cell(row = i, column = 4).value.lower(),
-            "price": sheet_obj.cell(row = i, column = 5).value,
-            "category": sheet_obj.cell(row = i, column = 6).value.lower(),
-            "subcategory": sheet_obj.cell(row = i, column = 7).value.lower(),
+            "id": str(sheet_obj.cell(row = i, column = 1).value or '').strip(),
+            "name": str(sheet_obj.cell(row = i, column = 2).value or '').strip(),
+            "description": str(sheet_obj.cell(row = i, column = 3).value or '').strip(),
+            "product_type": str(sheet_obj.cell(row = i, column = 4).value or '').lower().strip(),
+            "price": str(sheet_obj.cell(row = i, column = 5).value or '').strip(),
+            "category": str(sheet_obj.cell(row = i, column = 6).value or '').lower().strip(),
+            "subcategory": str(sheet_obj.cell(row = i, column = 7).value or '').lower().strip(),
         }
 
         has_image = False
@@ -96,8 +101,10 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
         if has_image:
             os.rename(f"{storage_folder}/photos/{info['id']}.jpg", f'{STORAGE}/photos/product/{product.id}.jpg')
+        # TODO add removal of garbage files
         products.append(product)
 
+    await context.bot.send_message(chat_id=seller_id, text=f"Added {len(products)} products!", reply_markup=buttons.BASE_BUTTONS)
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Added {len(products)} products!", reply_markup=buttons.BASE_BUTTONS)
 
 # handlers
