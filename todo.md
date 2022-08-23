@@ -38,6 +38,9 @@
 - Reconvert images in bulk import...
 - Защита от мошенничества
 
+- [x] remove global buttons
+- enable telegram logging channel
+
 - Кластер групп с курьерами...
 
 - Governing

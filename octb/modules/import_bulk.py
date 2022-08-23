@@ -1,7 +1,6 @@
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler
 
-from octb.modules.buttons import base as buttons
 import octb.modules.sql.product as sql
 from octb.modules.sql.product import Product
 from octb import LOGGER
@@ -62,7 +61,7 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
     # check if xslx file exists
     prices_path = storage_folder+"/prices.xlsx"
     if not os.path.exists(prices_path):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="No prices.xlsx!", reply_markup=buttons.BASE_BUTTONS)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="No prices.xlsx!")
         return
 
     # add products from xlsx
@@ -104,8 +103,8 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
         # TODO add removal of garbage files
         products.append(product)
 
-    await context.bot.send_message(chat_id=seller_id, text=f"Added {len(products)} products!", reply_markup=buttons.BASE_BUTTONS)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Added {len(products)} products!", reply_markup=buttons.BASE_BUTTONS)
+    await context.bot.send_message(chat_id=seller_id, text=f"Added {len(products)} products!")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Added {len(products)} products!")
 
 # handlers
 import_bulk_handler = CommandHandler('import_bulk', import_bulk, filters=filters.ChatType.PRIVATE)
