@@ -40,6 +40,7 @@
 
 - [x] remove global buttons
 - enable telegram logging channel
+- сделать рассылку про новый функционал (OLX)!
 
 - Кластер групп с курьерами...
 

@@ -44,7 +44,7 @@ def generate_folders():
             "temp": {
                 "product": "product",
             }
-        }
+        },
     }
     location_root=f"{STORAGE}"
     folders_root = {}

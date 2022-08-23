@@ -19,6 +19,12 @@ class User(BASE):
       def __repr__(self):
           return "<User {} ({})>".format(self.username, self.user_id)
 
+def count_users():
+  try:
+    return SESSION.query(User.user_id).count()
+  finally:
+      SESSION.close()
+
 User.__table__.create(checkfirst=True)
 
 INSERTION_LOCK = threading.RLock()
@@ -39,3 +45,4 @@ def update_user(user_id, username):
     else:
       user.username = username
     SESSION.commit()
+    return user

@@ -337,6 +337,18 @@ def archive_product(product_id, user_id):
         SESSION.commit()
         return product
 
+def count_products():
+  try:
+    return SESSION.query(Product.id).count()
+  finally:
+      SESSION.close()
+
+def count_product_buyers():
+  try:
+    return SESSION.query(Product_buyer.id).count()
+  finally:
+      SESSION.close()
+
 def product_sold(product_id, user_id):
     with INSERTION_LOCK:
         product = SESSION.query(Product)\
