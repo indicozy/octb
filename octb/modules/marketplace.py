@@ -248,6 +248,10 @@ async def send_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     else:
         await context.bot.edit_message_text(chat_id=seller_id, message_id=message_id, text=TEXT_GOT_SELLER(product, user_text), reply_markup=seller_menu)
 
+    try:
+        bought_preps.pop(user.id) # TODO try except
+    except:
+        pass
 
     await context.bot.send_message( #TODO add edit context for photos
         chat_id=user.id,

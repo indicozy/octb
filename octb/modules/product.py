@@ -259,8 +259,12 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         if product_preps[user.id]['photo_location']:
             os.rename(product_preps[user.id]['photo_location'], f'{storage_folder}{product_new.id}.jpg')
             photo_location = storage_folder
+        
+        try:
+            product_preps.pop(user.id) # TODO try except
+        except:
+            pass
 
-        product_preps.pop(user.id) # TODO try except
         return ConversationHandler.END
     else:
         await update.message.reply_text( "Да/Нет?")
@@ -274,6 +278,11 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
     )
+
+    try:
+        product_preps.pop(user.id) # TODO try except
+    except:
+        pass
 
     return ConversationHandler.END
 

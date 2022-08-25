@@ -84,6 +84,11 @@ async def review_description(update: Update, context: ContextTypes.DEFAULT_TYPE)
                                                     f"{review_preps[user.id]['description']}"
                                                     )
 
+    try:
+        review_preps.pop(user.id) # TODO try except
+    except:
+        pass
+
     await update.message.reply_text( #TODO add edit context for photos
         text=f"Спасибо за ответ!"
         )
@@ -97,6 +102,11 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
     )
+
+    try:
+        review_preps.pop(user.id) # TODO try except
+    except:
+        pass
 
     return ConversationHandler.END
 

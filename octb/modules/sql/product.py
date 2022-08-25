@@ -148,6 +148,13 @@ def get_seller_by_user_id(user_id):
     finally:
         SESSION.close()
 
+def get_sellers():
+    try:
+        return SESSION.query(Seller)\
+          .all()
+    finally:
+        SESSION.close()
+
 def update_seller_name(user_id, text):
   with INSERTION_LOCK:
     seller = SESSION.query(Seller).get(user_id)
@@ -348,6 +355,28 @@ def count_product_buyers():
     return SESSION.query(Product_buyer.id).count()
   finally:
       SESSION.close()
+
+# def count_product_sold_by_seller_id(seller_id):
+#   try:
+#     return SESSION.query(Product_buyer.id).where(Product_buyer.seller_id == seller_id).count()
+#   finally:
+#       SESSION.close()
+
+# def count_product_sold_by_seller_id_all():
+#     sellers = get_sellers()
+#     seller_products_sold = {}
+
+#     print(sellers)
+#     for seller in sellers:
+#         print(seller)
+#         print(seller.user_id)
+#         # if seller.name:
+#         #     print(seller)
+#         #     print(seller.user_id)
+#         #     seller_products_sold[seller.name] = count_product_sold_by_seller_id(seller.user_id)
+#         # else:
+#         seller_products_sold[str(seller.user_id)] = count_product_sold_by_seller_id(seller.user_id)
+#     return seller_products_sold
 
 def product_sold(product_id, user_id):
     with INSERTION_LOCK:

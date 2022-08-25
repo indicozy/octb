@@ -23,10 +23,14 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     users_count = sql_user.count_users()
     products_count = sql_product.count_products()
     bought_items_count = sql_product.count_product_buyers()
+    # product_sold_by_seller = sql_product.count_product_sold_by_seller_id_all()
 
     users = sql_user.get_users_all()
 
-    await update.message.reply_text(text=f"Users: {users_count}\nProduct: {products_count}\nBought_items: {bought_items_count}")
+    response = f"Users: {users_count}\nProduct: {products_count}\nBought_items: {bought_items_count}"
+    # for key, value in product_sold_by_seller.items():
+    #     response += f"\n{key}: {value}"
+    await update.message.reply_text(text=response)
 
 async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
     async def send_message(user_id, text):
