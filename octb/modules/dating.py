@@ -407,7 +407,8 @@ add_dating_user = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancel)],
 )
 
-# TODO add 
+# TODO add handlers for reaction
+# TODO add matches and rejects
 
 dating_category_handlers = [
     dating_category_toggle_handler,
