@@ -408,7 +408,7 @@ add_dating_user = ConversationHandler(
 )
 
 # TODO add handlers for reaction
-# TODO add matches and rejects
+# TODO add matches and rejects sql
 
 dating_category_handlers = [
     dating_category_toggle_handler,
