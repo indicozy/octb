@@ -1,0 +1,134 @@
+import threading
+
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime, BigInteger, Boolean
+from octb.modules.sql import BASE, SESSION
+
+INSERTION_LOCK = threading.RLock()
+
+class DatingUser(BASE):
+      __tablename__ = "dating_user"
+
+      user_id = Column(BigInteger, primary_key=True)
+      name = Column(String(64))
+      description = Column(String(2048), default="")
+      gender = Column(Boolean, nullable=True) # True = Boy, False = Girl, None = Other
+      interest_gender = Column(Boolean, nullable=True)
+      is_on_campus = Column(Boolean, default=True)
+      location = Column(String(64))
+      age = Column(Integer)
+      has_image = Column(Boolean) # TODO remove
+
+      is_archived = Column(Boolean, default=False)
+      # Interests
+      # Study-buddy, romance, friend, sport, hobbies, roomate
+
+      created_at = Column(DateTime(timezone=True), server_default=func.now())
+      updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+      def __init__(self, user_id, name, gender, interest_gender, location, age, has_image, is_on_campus=True, description=""):
+          self.user_id = user_id
+          self.name = name
+          self.description = description
+          self.gender = gender
+          self.interest_gender = interest_gender
+          self.is_on_campus = is_on_campus
+          self.location = location
+          self.age = age
+          self.has_image = has_image
+
+      def __repr__(self):
+          return "<DatingUser ({})>".format(self.user_id)
+DatingUser.__table__.create(checkfirst=True)
+
+def add_dating_user(user_id, name, gender, interest_gender, location, age, has_image, is_on_campus=True, description=""):
+    dating_user_obj = SESSION.query(DatingUser)\
+        .where(DatingUser.user_id == user_id)\
+        .first() # TODO try except
+    if dating_user_obj:
+        dating_user_obj.name = name
+        dating_user_obj.gender = gender
+        dating_user_obj.interest_gender = interest_gender
+        dating_user_obj.location = location
+        dating_user_obj.age = age
+        dating_user_obj.has_image = has_image
+        dating_user_obj.is_on_campus = is_on_campus
+        dating_user_obj.description = description
+    else:
+        with INSERTION_LOCK:
+            dating_user_obj = DatingUser(user_id, name, gender, interest_gender, location, age, has_image, is_on_campus=True, description="")
+    SESSION.add(dating_user_obj)
+    SESSION.commit()
+    return dating_user_obj
+
+def get_dating_user_by_id(user_id):
+    try:
+        return SESSION.query(DatingUser).where(DatingUser.user_id == user_id).first()
+    finally:
+        SESSION.close()
+
+class DatingCategory(BASE):
+      __tablename__ = "dating_category"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      user_id = Column(BigInteger)
+      name = Column(String(64))
+
+      def __init__(self, name, user_id):
+          self.name = name
+          self.user_id = user_id
+
+      def __repr__(self):
+          return "<DatingCategory {} ({})>".format(self.id, self.name)
+DatingCategory.__table__.create(checkfirst=True)
+
+def get_dating_category_by_user_id(user_id):
+    try:
+        return SESSION.query(DatingCategory).where(DatingCategory.user_id == user_id).all()
+    finally:
+        SESSION.close()
+
+def toggle_dating_category(user_id, name):
+    dating_category_user = SESSION.query(DatingCategory)\
+        .where(DatingCategory.user_id == user_id)\
+        .where(DatingCategory.name == name)\
+        .first() # TODO try except
+    if not dating_category_user:
+        with INSERTION_LOCK:
+            dating_category_user = DatingCategory(name, user_id)
+            SESSION.add(dating_category_user)
+            SESSION.commit()
+        return dating_category_user
+    else:
+        print("helo")
+        SESSION.delete(dating_category_user)
+        SESSION.commit()
+        return None
+
+class DatingMatch(BASE):
+      __tablename__ = "dating_match"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      from_id = Column(BigInteger)
+      to_id = Column(BigInteger)
+
+      def __init__(self, from_id, to_id):
+          self.from_id = from_id
+          self.to_id = to_id
+
+      def __repr__(self):
+          return "<DatingMatch {}>".format(self.id)
+
+class DatingReject(BASE):
+      __tablename__ = "dating_reject"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      rejector_id = Column(BigInteger)
+      rejectee_id = Column(BigInteger)
+
+      def __init__(self, rejector_id, rejectee_id):
+          self.rejector_id = rejector_id
+          self.rejectee_id = rejectee_id
+
+      def __repr__(self):
+          return "<DatingMatch {}>".format(self.id)
+DatingMatch.__table__.create(checkfirst=True)

@@ -16,10 +16,8 @@ product_preps = {}
 
 __mod_name__ = "product"
 
-from decouple import config
-MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')
-
 # env
+from decouple import config
 STORAGE=config('STORAGE')
 MARKETPLACE_CHAT_ID=config('MARKETPLACE_CHAT_ID')
 MARKETPLACE_CHAT_ACCOUNT=config('MARKETPLACE_CHAT_ACCOUNT')

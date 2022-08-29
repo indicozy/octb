@@ -41,6 +41,7 @@ def generate_folders():
             },
         "photos": {
             "product": "product",
+            "dating": "dating",
             "temp": {
                 "product": "product",
             }
