@@ -143,12 +143,19 @@ def get_user_categories(user_id):
     
 
 def get_potential_partner_by_interest(user_id, user_id_start, interests):
+    user = get_dating_user_by_id(user_id)
     try:
-        return SESSION.query(DatingUser, DatingCategory)\
+        partner =  SESSION.query(DatingUser, DatingCategory)\
             .where(DatingUser.user_id > user_id_start)\
             .where(DatingUser.user_id != user_id)\
             .where(
                 DatingUser.user_id == DatingCategory.user_id
+            )\
+            .where(
+                DatingUser.gender == user.interest_gender if user.interest_gender else True # TODO NOT TESTED
+            )\
+            .where(
+                or_(DatingUser.interest_gender == user.gender, DatingUser.interest_gender == None) # TODO NOT TESTED
             )\
             .where(DatingCategory.name.in_(interests))\
             .join(DatingReject, DatingReject.rejectee_id == DatingUser.user_id, isouter=True)\
@@ -159,7 +166,11 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
                 or_(DatingReject.rejectee_id != user_id, DatingReject.rejectee_id == None)
                 
             )\
-            .all()
+            .first() # TODO fix many users bug
+        if partner:
+            return partner[0]
+        else:
+            return None
     finally:
         SESSION.close()
 
@@ -186,3 +197,22 @@ def add_reject(rejector_id, rejectee_id):
     SESSION.add(dating_user_obj)
     SESSION.commit()
     return dating_user_obj
+
+def get_reject(rejector_id, rejectee_id):
+    try:
+        return SESSION.query(DatingReject)\
+        .where(DatingReject.rejector_id == rejector_id)\
+        .where(DatingReject.rejectee_id == rejectee_id)\
+        .first()
+    finally:
+        SESSION.close()
+
+def remove_reject(rejector_id, rejectee_id):
+    dating_reject = SESSION.query(DatingReject)\
+        .where(DatingReject.rejector_id == rejector_id)\
+        .where(DatingReject.rejectee_id == rejectee_id)\
+        .first() # TODO try except
+    if dating_reject:
+        SESSION.delete(dating_reject)
+        SESSION.commit()
+        return None

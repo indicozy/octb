@@ -271,7 +271,6 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     text = generate_post(dating_preps[user.id]['name'], dating_preps[user.id]['description'], ["ваши_категории"], args={"Возраст" : dating_preps[user.id]['age'],
                                                                                                                    "Гендер": gender_conf(dating_preps[user.id]['gender']),
-                                                                                                                    "Город": dating_preps[user.id]['location'],
                                                                                                                    })
 
     text += "\n\ny/n?"
@@ -286,7 +285,6 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     dating_preps[user.id]['photo_location'] = None
     text = generate_post(dating_preps[user.id]['name'], dating_preps[user.id]['description'], [f"ваши_категории"], args={"Возраст" : dating_preps[user.id]['age'],
                                                                                                                    "Гендер": gender_conf(dating_preps[user.id]['gender']),
-                                                                                                                    "Город": dating_preps[user.id]['location'],
                                                                                                                    })
 
     text += "\n\ny/n?"
@@ -423,7 +421,6 @@ def get_interests(user_id):
 def generate_post_partner(dating_partner, categories):
     return generate_post(f"{dating_partner.name} - {dating_partner.location}", dating_partner.description, categories, args={"Возраст" : dating_partner.age,
                                                                                                         "Гендер": dating_partner.gender,
-                                                                                                        "Город": dating_partner.location,
                                                                                                         })
 
 async def find_next_partner(update, user_id):
@@ -438,13 +435,13 @@ async def find_next_partner(update, user_id):
     interests = get_interests(user_id)
     print(interests)
     print(user_id)
-    sql_data = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
-    print(sql_data)
-    if not sql_data:
+    dating_partner = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
+    print(dating_partner)
+    if not dating_partner:
         await update.message.reply_text("На сегодня все, Вы вышли на главное меню")
         return ConversationHandler.END
-    dating_partner = sql_data[0][0]
-    categories = [category.name for _, category in [row for row in sql_data]]
+    categories = sql.get_dating_category_by_user_id(dating_partner.user_id)
+    categories = [category.name for category in categories]
     categories_merge = list(set(categories).intersection(interests))
     print(dating_partner)
     print(categories)
@@ -486,10 +483,13 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     dating_partner = sql.get_dating_user_by_id(user.id)
     categories = sql.get_user_categories(user.id)
     text += generate_post_partner(dating_partner, categories=categories)
-    await context.bot.send_message(text=text,
-                                   chat_id=dating_status[user.id]['last_partner_id'],
-                                   reply_markup=menu
-                                   )
+    is_rejected = sql.get_reject(dating_status[user.id]['last_partner_id'], user.id)
+    sql.remove_reject(user.id, dating_status[user.id]['last_partner_id'])
+    if not is_rejected:
+        await context.bot.send_message(text=text,
+                                    chat_id=dating_status[user.id]['last_partner_id'],
+                                    reply_markup=menu
+                                    )
     response = await find_next_partner(update, user.id)
     return response
 
@@ -538,10 +538,10 @@ async def dating_response_dislike(update: Update, context: ContextTypes.DEFAULT_
     user = query.from_user
     text = query.data
     
-    await query.answer()
+    await query.answer("Данный пользователь больше не будет писать вам.", show_alert=True)
     LOGGER.info("text of %s: %s", user.first_name, text)
 
-    user_liked = int(text.replace("DATING_RESPONSE_LIKE_", ""))
+    user_liked = int(text.replace("DATING_RESPONSE_DISLIKE_", ""))
     sql.add_reject(user_liked, user.id)
 
 STATUS, ENVELOPE = range(2)
@@ -618,7 +618,7 @@ show_interests_handler = CommandHandler("interests", show_interests, filters=fil
 dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
 
 dating_response_like_handler = CallbackQueryHandler(dating_response_like, pattern="^" + "DATING_RESPONSE_LIKE_")
-dating_response_dislike_handler = CallbackQueryHandler(dating_response_dislike, pattern="^" + "DATING_RESPONSE_LIKE_")
+dating_response_dislike_handler = CallbackQueryHandler(dating_response_dislike, pattern="^" + "DATING_RESPONSE_DISLIKE_")
 
 
 application.add_handlers([search_date, add_dating_user, show_interests_handler, dating_category_toggle_handler, dating_response_like_handler, dating_response_dislike_handler])
