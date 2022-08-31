@@ -286,7 +286,7 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     dating_preps[user.id]['photo_location'] = None
-    text = generate_post(f"{dating_preps[user.id]['name']} - {dating_preps[user.id]['age']} лет", dating_preps[user.id]['description'], [f"ваши_категории"])
+    text = generate_post(f"{dating_preps[user.id]['name']} - {dating_preps[user.id]['age']} годиков", dating_preps[user.id]['description'], [f"ваши_категории"])
 
     text += "\n\ny/n?"
     await update.message.reply_text(text)
@@ -410,7 +410,7 @@ async def dating_category_toggle(update: Update, context: ContextTypes.DEFAULT_T
         )
 
 def generate_post_partner(dating_partner, categories):
-    return generate_post(f"{dating_partner.name} - {dating_partner.age} лет", dating_partner.description, categories)
+    return generate_post(f"{dating_partner.name} - {dating_partner.age} годиков", dating_partner.description, categories)
 
 def dating_status_boilerplate(user_id):
     if not (user_id in dating_status and 'last_partner_id' in dating_status[user_id]):

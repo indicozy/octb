@@ -504,3 +504,12 @@ def get_reviews_by_product_id(product_id):
         return 0, 0
     query_sum /= query_count
     return query_sum, query_count
+
+def get_products_by_seller():
+    try:
+        return SESSION.query(Seller, Product, Product_buyer)\
+            .where(Seller.user_id == Product.seller_id)\
+            .where(Product.id == Product_buyer.product_id)\
+            .all()
+    finally:
+        SESSION.close()

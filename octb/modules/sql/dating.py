@@ -66,6 +66,12 @@ def get_dating_user_by_id(user_id):
     finally:
         SESSION.close()
 
+def count_dating_users():
+  try:
+    return SESSION.query(DatingUser.user_id).count()
+  finally:
+      SESSION.close()
+
 class DatingCategory(BASE):
       __tablename__ = "dating_category"
 
@@ -167,7 +173,7 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
                 or_(DatingReject.rejectee_id != user_id, DatingReject.rejectee_id == None)
             )\
             .order_by(DatingUser.user_id.asc())\
-            .first() # TODO fix many users bug
+            .first()
         if partner:
             print(partner[0].user_id, "lmao")
             return partner[0]
@@ -219,3 +225,9 @@ def remove_reject(rejector_id, rejectee_id):
         SESSION.delete(dating_reject)
         SESSION.commit()
         return None
+
+def count_dating_matches():
+  try:
+    return SESSION.query(DatingMatch.id).count()
+  finally:
+      SESSION.close()
