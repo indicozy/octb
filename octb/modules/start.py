@@ -10,8 +10,10 @@ __mod_name__ = "start"
 async def start(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     sql.update_user(user.id, user.username)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Привет!\n\nЗнакомьтесь с новыми людьми со схожими интересами. Для начала, напишите /connect\n\nТакже со мной вы можете купить еду, заказать донер, арендовать велосипед и многое другое! Напишите /marketplace чтобы посмотреть ассортимент.",
-                                   reply_markup=ReplyKeyboardRemove())
+    await context.bot.send_photo(photo=open("./logo.png", 'rb'),
+                                 chat_id=update.effective_chat.id, 
+                                 caption="Привет!\n\nЗнакомьтесь с новыми людьми со схожими интересами. Для начала, напишите /connect\n\nТакже со мной вы можете купить еду, заказать донер, арендовать велосипед и многое другое! Напишите /marketplace чтобы посмотреть ассортимент.",
+                                reply_markup=ReplyKeyboardRemove())
 
 async def show_id(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
