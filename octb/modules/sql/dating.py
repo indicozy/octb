@@ -162,3 +162,27 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
             .all()
     finally:
         SESSION.close()
+
+def add_match(from_id, to_id):
+    dating_user_obj = SESSION.query(DatingMatch)\
+        .where(DatingMatch.from_id == from_id)\
+        .where(DatingMatch.to_id == to_id)\
+        .first() # TODO try except
+    if not dating_user_obj:
+        with INSERTION_LOCK:
+            dating_user_obj = DatingMatch(from_id, to_id)
+    SESSION.add(dating_user_obj)
+    SESSION.commit()
+    return dating_user_obj
+
+def add_reject(rejector_id, rejectee_id):
+    dating_user_obj = SESSION.query(DatingReject)\
+        .where(DatingReject.rejector_id == rejector_id)\
+        .where(DatingReject.rejectee_id == rejectee_id)\
+        .first() # TODO try except
+    if not dating_user_obj:
+        with INSERTION_LOCK:
+            dating_user_obj = DatingReject(rejector_id, rejectee_id)
+    SESSION.add(dating_user_obj)
+    SESSION.commit()
+    return dating_user_obj

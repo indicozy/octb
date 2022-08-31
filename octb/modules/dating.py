@@ -441,7 +441,7 @@ async def find_next_partner(update, user_id):
     sql_data = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
     print(sql_data)
     if not sql_data:
-        await update.message.reply_text("На сегодня все")
+        await update.message.reply_text("На сегодня все, Вы вышли на главное меню")
         return ConversationHandler.END
     dating_partner = sql_data[0][0]
     categories = [category.name for _, category in [row for row in sql_data]]
@@ -505,6 +505,44 @@ async def sleep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = "Вы вышли из поисковика"
     await update.message.reply_text(text)
     return ConversationHandler.END
+
+async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    async def send_message_like(user_id, user_recipient):
+        dating_user_liked = sql.get_dating_user_by_id(user_id)
+        dating_category_liked = sql.get_dating_category_by_user_id(user_id)
+        dating_category_liked = [category.name for category in dating_category_liked]
+        menu_liked = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(f"Профиль", url=f"tg://user?id={user_id}")
+            ],
+        ])
+        await context.bot.send_message(chat_id=user_recipient, text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
+                                    reply_markup=menu_liked)
+    query = update.callback_query
+    print("lmao")
+
+    user = query.from_user
+    text = query.data
+    
+    await query.answer()
+    LOGGER.info("text of %s: %s", user.first_name, text)
+
+    user_liked = int(text.replace("DATING_RESPONSE_LIKE_", ""))
+    await send_message_like(user_liked, user.id)
+    await send_message_like(user.id, user_liked)
+    sql.add_match(user_liked, user.id)
+
+async def dating_response_dislike(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+
+    user = query.from_user
+    text = query.data
+    
+    await query.answer()
+    LOGGER.info("text of %s: %s", user.first_name, text)
+
+    user_liked = int(text.replace("DATING_RESPONSE_LIKE_", ""))
+    sql.add_reject(user_liked, user.id)
 
 STATUS, ENVELOPE = range(2)
 
@@ -579,9 +617,9 @@ show_interests_handler = CommandHandler("interests", show_interests, filters=fil
 
 dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
 
-dating_category_handlers = [
-    dating_category_toggle_handler,
-]
+dating_response_like_handler = CallbackQueryHandler(dating_response_like, pattern="^" + "DATING_RESPONSE_LIKE_")
+dating_response_dislike_handler = CallbackQueryHandler(dating_response_dislike, pattern="^" + "DATING_RESPONSE_LIKE_")
 
-application.add_handlers([search_date, add_dating_user, show_interests_handler] + dating_category_handlers)
+
+application.add_handlers([search_date, add_dating_user, show_interests_handler, dating_category_toggle_handler, dating_response_like_handler, dating_response_dislike_handler])
 application.job_queue.run_daily(dating_status_restore, datetime.time(hour=5, minute=0))
