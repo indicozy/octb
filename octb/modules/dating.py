@@ -49,7 +49,8 @@ async def new_dating_user(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
 
     await update.message.reply_text(
-        "Имя"
+        "Регистрация на Uni Connect.\n\nКак тебя зовут?"
+        "\nдля отмены регистрации пишите /cancel",
     )
 
     return NAME
@@ -73,8 +74,7 @@ async def name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ], one_time_keyboard=True)
     
     await update.message.reply_text(
-        "Gender?"
-        "Send /cancel to stop talking to me.\n\n",
+        "Ваш гендер?",
         reply_markup=menu
     )
 
@@ -104,8 +104,7 @@ async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             ],
         ], one_time_keyboard=True)
         await update.message.reply_text(
-            "Gender?"
-            "Send /cancel to stop talking to me.\n\n",
+            "Ваш гендер?",
             reply_markup=menu
         )
         return GENDER
@@ -123,8 +122,7 @@ async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ], one_time_keyboard=True)
     
     await update.message.reply_text(
-        "Gender you like?"
-        "Send /cancel to stop talking to me.\n\n",
+        "Какой гендер тебе интересен?",
         reply_markup=menu
     )
 
@@ -154,8 +152,7 @@ async def interest_gender(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             ],
         ], one_time_keyboard=True)
         await update.message.reply_text(
-            "Gender you like?"
-            "Send /cancel to stop talking to me.\n\n",
+            "Какой гендер тебе интересен?",
             reply_markup=menu
         )
         return INTEREST_GENDER
@@ -167,8 +164,7 @@ async def interest_gender(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     ], one_time_keyboard=True)
     
     await update.message.reply_text(
-        "Are you in campus?"
-        "Send /cancel to stop talking to me.\n\n",
+        "Вы в кампусе?",
         reply_markup=menu
     )
 
@@ -184,15 +180,13 @@ async def is_on_campus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         dating_preps[user.id]['is_on_campus'] = True
         dating_preps[user.id]['location'] = "Кампус".capitalize()
         await update.message.reply_text(
-            "Your age?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Сколько тебе годиков?"
         )
         return AGE
     elif user_text == "нет":
         dating_preps[user.id]['is_on_campus'] = False
         await update.message.reply_text(
-            "Your location?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Из какого ты города?"
         )
 
         return LOCATION
@@ -203,8 +197,7 @@ async def is_on_campus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             ],
         ], one_time_keyboard=True)
         await update.message.reply_text(
-            "Are you in campus?"
-            "Send /cancel to stop talking to me.\n\n",
+            "Ты в кампусе?",
             reply_markup=menu
         )
         return INTEREST_GENDER
@@ -218,8 +211,7 @@ async def location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     dating_preps[user.id]['location'] = user_text
     await update.message.reply_text(
-        "Your age?"
-        "Send /cancel to stop talking to me.\n\n"
+        "Сколько тебе годиков?"
     )
     return AGE
 
@@ -230,15 +222,13 @@ async def age(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     if not user_text.isdigit():
         await update.message.reply_text(
-            "Your age?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Сколько тебе годиков?"
         )
         return AGE
 
     dating_preps[user.id]['age'] = int(user_text)
     await update.message.reply_text(
-        "Description?"
-        "Send /cancel to stop talking to me.\n\n"
+        "Расскажи о себе и кого хочешь найти, чем предлагаешь заняться. Это поможет лучше подобрать тебе компанию."
     )
     return DESCRIPTION
 
@@ -250,8 +240,7 @@ async def description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     dating_preps[user.id]['description'] = user_text
     await update.message.reply_text(
-        "Send image"
-        "Send /cancel to stop talking to me.\n\n"
+        "Теперь пришли фото, его будут видеть другие пользователи"
     )
     return IMAGE
 
@@ -273,11 +262,19 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                                                                                                                    "Гендер": gender_conf(dating_preps[user.id]['gender']),
                                                                                                                    })
 
-    text += "\n\ny/n?"
+    text += "\n\nВсе верно? Да/Нет"
+
+    menu = ReplyKeyboardMarkup([
+        [
+            "Да",
+            "Нет",
+        ],
+    ], one_time_keyboard=True)
 
     await update.message.reply_photo(
         photo=open(storage_location, 'rb'), # TODO fix open to with open()
         caption=text,
+        reply_markup=menu
     )
 
     return CONFIRMATION
@@ -316,7 +313,7 @@ async def show_interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             menu_items.append(InlineKeyboardButton(f"{value}", callback_data=f"DATING_CATEGORY_TOGGLE_{key}"))
             
     menu = InlineKeyboardMarkup(generate_menu(menu_items))
-    await context.bot.send_message(chat_id=user.id, text="Выберите категории, в которых вы хотите найти партнера и вы можете начать искать партнера", reply_markup=menu)
+    await context.bot.send_message(chat_id=user.id, text="Выберите категории, в которых вы хотите найти партнера и вы можете начать поиск. Для начала, нажмите /connect", reply_markup=menu)
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Stores the selected gender and asks for a photo."""
@@ -327,7 +324,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     if user_text in ['N', 'n', "Нет", "нет"]:
         await update.message.reply_text(
-            "Вы вернулись в главный экран"
+            "Вы отменили регистрацию, вы вернулись в главный экран"
         )
         return ConversationHandler.END
 
@@ -359,7 +356,13 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         return ConversationHandler.END
     else:
-        await update.message.reply_text( "Да/Нет?")
+        menu = ReplyKeyboardMarkup([
+            [
+                "Да",
+                "Нет",
+            ],
+        ], one_time_keyboard=True)
+        await update.message.reply_text( "Да/Нет?", reply_markup=menu)
 
     return CONFIRMATION
 
@@ -406,7 +409,7 @@ async def dating_category_toggle(update: Update, context: ContextTypes.DEFAULT_T
     menu = InlineKeyboardMarkup(generate_menu(menu_items))
 
     await query.edit_message_text(
-        "Ваши категории:", reply_markup=menu
+        "Выберите категории, в которых вы хотите найти партнера и вы можете начать поиск. Для начала, нажмите /connect", reply_markup=menu
         )
 
 def generate_post_partner(dating_partner, categories):
@@ -420,17 +423,20 @@ def dating_status_boilerplate(user_id):
 async def find_next_partner(update, user_id):
     dating_user = sql.get_dating_user_by_id(user_id)
     if not dating_user:
-        await update.message.reply_text("Вы не добавлены в партнеры", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("Вы не зарегистрированы. Для регистрации, нажмите /connect_register.", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END 
     dating_status_boilerplate(user_id) 
     interests = sql.get_dating_category_by_user_id(user_id)
     interests = [category.name for category in interests]
+    if not interests:
+        await update.message.reply_text("Вы не выбрали категории, для выбора категории, нажмите /connect_categories", reply_markup=ReplyKeyboardRemove())
+        return ConversationHandler.END
     # print(interests)
     # print(user_id)
     dating_partner = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
     # print(dating_partner)
     if not dating_partner:
-        await update.message.reply_text("На сегодня все, Вы вышли на главное меню", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("Больше нет пользователей, приходите завтра. Вы вышли на главное меню", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
     categories = sql.get_dating_category_by_user_id(dating_partner.user_id)
     categories = [category.name for category in categories]
@@ -505,7 +511,7 @@ async def dislike(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def sleep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
-    text = "Вы вышли из поисковика"
+    text = "Вы вышли из поисковика, на главное меню..."
     await update.message.reply_text(text)
     return ConversationHandler.END
 
