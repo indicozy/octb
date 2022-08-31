@@ -569,7 +569,7 @@ STATUS, ENVELOPE = range(2)
 
 search_date = ConversationHandler(
     entry_points=[
-            CommandHandler("search", search, filters=filters.ChatType.PRIVATE),
+            CommandHandler("connect", search, filters=filters.ChatType.PRIVATE),
         ],
     states={
         STATUS: [
@@ -593,7 +593,7 @@ NAME, GENDER, INTEREST_GENDER, IS_ON_CAMPUS, LOCATION, AGE, DESCRIPTION, IMAGE, 
 # main
 add_dating_user = ConversationHandler(
     entry_points=[
-            CommandHandler("meet", new_dating_user, filters=filters.ChatType.PRIVATE),
+            CommandHandler("connect_register", new_dating_user, filters=filters.ChatType.PRIVATE),
         ],
     states={
         NAME: [
@@ -634,7 +634,7 @@ add_dating_user = ConversationHandler(
 # TODO add handlers for reaction
 # TODO add matches and rejects sql
 
-show_interests_handler = CommandHandler("interests", show_interests, filters=filters.ChatType.PRIVATE)
+show_interests_handler = CommandHandler("connect_categories", show_interests, filters=filters.ChatType.PRIVATE)
 
 dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
 
