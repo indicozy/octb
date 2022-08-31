@@ -239,8 +239,14 @@ async def description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
 
     dating_preps[user.id]['description'] = user_text
+    menu = ReplyKeyboardMarkup([
+        [
+            "Пропустить",
+        ],
+    ], one_time_keyboard=True)
     await update.message.reply_text(
-        "Теперь пришли фото, его будут видеть другие пользователи"
+        "Теперь пришли фото, его будут видеть другие пользователи. Чтобы продолжить без фото, напишите 'Пропустить' или /skip",
+        reply_markup=menu
     )
     return IMAGE
 
@@ -285,8 +291,14 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     dating_preps[user.id]['photo_location'] = None
     text = generate_post(f"{dating_preps[user.id]['name']} - {dating_preps[user.id]['age']} годиков", dating_preps[user.id]['description'], [f"ваши_категории"])
 
-    text += "\n\ny/n?"
-    await update.message.reply_text(text)
+    text += "\n\nВсе верно? Да/Нет"
+
+    menu = ReplyKeyboardMarkup([
+        [
+            'Да', 'Нет'
+        ],
+    ], one_time_keyboard=True)
+    await update.message.reply_text(text, reply_markup=menu)
 
     return CONFIRMATION
 
@@ -301,7 +313,6 @@ async def show_interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         text = update.message.text
     user_categories = sql.get_dating_category_by_user_id(user.id)
 
-    # ✅
     menu_items = []
     for key, value in categories.items():
         inserted = False
