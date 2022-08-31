@@ -129,7 +129,7 @@ def toggle_dating_category(user_id, name):
             SESSION.commit()
         return dating_category_user
     else:
-        print("helo")
+        # print("helo")
         SESSION.delete(dating_category_user)
         SESSION.commit()
         return None
@@ -143,10 +143,12 @@ def get_user_categories(user_id):
     
 
 def get_potential_partner_by_interest(user_id, user_id_start, interests):
+    print(user_id_start, "lol")
     user = get_dating_user_by_id(user_id)
     try:
         partner =  SESSION.query(DatingUser, DatingCategory)\
             .where(DatingUser.user_id > user_id_start)\
+            .join(DatingReject, DatingReject.rejectee_id == DatingUser.user_id, isouter=True)\
             .where(DatingUser.user_id != user_id)\
             .where(
                 DatingUser.user_id == DatingCategory.user_id
@@ -158,18 +160,19 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
                 or_(DatingUser.interest_gender == user.gender, DatingUser.interest_gender == None) # TODO NOT TESTED
             )\
             .where(DatingCategory.name.in_(interests))\
-            .join(DatingReject, DatingReject.rejectee_id == DatingUser.user_id, isouter=True)\
             .where(
                 or_(DatingReject.rejector_id != DatingUser.user_id, DatingReject.rejector_id == None)
             )\
             .where(
                 or_(DatingReject.rejectee_id != user_id, DatingReject.rejectee_id == None)
-                
             )\
+            .order_by(DatingUser.user_id.asc())\
             .first() # TODO fix many users bug
         if partner:
+            print(partner[0].user_id, "lmao")
             return partner[0]
         else:
+            print("not found")
             return None
     finally:
         SESSION.close()

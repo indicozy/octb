@@ -433,18 +433,18 @@ async def find_next_partner(update, user_id):
         return ConversationHandler.END 
     
     interests = get_interests(user_id)
-    print(interests)
-    print(user_id)
+    # print(interests)
+    # print(user_id)
     dating_partner = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
-    print(dating_partner)
+    # print(dating_partner)
     if not dating_partner:
         await update.message.reply_text("На сегодня все, Вы вышли на главное меню")
         return ConversationHandler.END
     categories = sql.get_dating_category_by_user_id(dating_partner.user_id)
     categories = [category.name for category in categories]
     categories_merge = list(set(categories).intersection(interests))
-    print(dating_partner)
-    print(categories)
+    # print(dating_partner)
+    # print(categories)
 
     dating_status[user_id]['last_partner_id'] = dating_partner.user_id
     text = generate_post_partner(dating_partner, categories_merge)
@@ -466,7 +466,7 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     response = await find_next_partner(update, user.id)
-    print(response)
+    # print(response)
     return response
 
 async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -519,7 +519,7 @@ async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYP
         await context.bot.send_message(chat_id=user_recipient, text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
                                     reply_markup=menu_liked)
     query = update.callback_query
-    print("lmao")
+    # print("lmao")
 
     user = query.from_user
     text = query.data
