@@ -429,7 +429,7 @@ async def find_next_partner(update, user_id):
         dating_status[user_id]['last_partner_id'] = 0
     dating_user = sql.get_dating_user_by_id(user_id)
     if not dating_user:
-        await update.message.reply_text("Вы не добавлены в партнеры")
+        await update.message.reply_text("Вы не добавлены в партнеры", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END 
     
     interests = get_interests(user_id)
@@ -438,7 +438,7 @@ async def find_next_partner(update, user_id):
     dating_partner = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
     # print(dating_partner)
     if not dating_partner:
-        await update.message.reply_text("На сегодня все, Вы вышли на главное меню")
+        await update.message.reply_text("На сегодня все, Вы вышли на главное меню", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
     categories = sql.get_dating_category_by_user_id(dating_partner.user_id)
     categories = [category.name for category in categories]
