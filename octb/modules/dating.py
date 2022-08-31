@@ -286,9 +286,7 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     dating_preps[user.id]['photo_location'] = None
-    text = generate_post(dating_preps[user.id]['name'], dating_preps[user.id]['description'], [f"ваши_категории"], args={"Возраст" : dating_preps[user.id]['age'],
-                                                                                                                   "Гендер": gender_conf(dating_preps[user.id]['gender']),
-                                                                                                                   })
+    text = generate_post(f"{dating_preps[user.id]['name']} - {dating_preps[user.id]['age']} лет", dating_preps[user.id]['description'], [f"ваши_категории"])
 
     text += "\n\ny/n?"
     await update.message.reply_text(text)
@@ -411,28 +409,22 @@ async def dating_category_toggle(update: Update, context: ContextTypes.DEFAULT_T
         "Ваши категории:", reply_markup=menu
         )
 
-def get_interests(user_id):
-    if not (user_id in dating_status and 'interests' in dating_status[user_id]):
-        if not dating_status[user_id]:
-            dating_status[user_id] = {}
-        dating_status[user_id]['interests'] = sql.get_user_categories(user_id)
-    return dating_status[user_id]['interests']
-
 def generate_post_partner(dating_partner, categories):
-    return generate_post(f"{dating_partner.name} - {dating_partner.location}", dating_partner.description, categories, args={"Возраст" : dating_partner.age,
-                                                                                                        "Гендер": dating_partner.gender,
-                                                                                                        })
+    return generate_post(f"{dating_partner.name} - {dating_partner.age} лет", dating_partner.description, categories)
 
-async def find_next_partner(update, user_id):
+def dating_status_boilerplate(user_id):
     if not (user_id in dating_status and 'last_partner_id' in dating_status[user_id]):
         dating_status[user_id] = {}
         dating_status[user_id]['last_partner_id'] = 0
+
+async def find_next_partner(update, user_id):
     dating_user = sql.get_dating_user_by_id(user_id)
     if not dating_user:
         await update.message.reply_text("Вы не добавлены в партнеры", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END 
-    
-    interests = get_interests(user_id)
+    dating_status_boilerplate(user_id) 
+    interests = sql.get_dating_category_by_user_id(user_id)
+    interests = [category.name for category in interests]
     # print(interests)
     # print(user_id)
     dating_partner = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
@@ -493,6 +485,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     dating_partner = sql.get_dating_user_by_id(user.id)
     categories = sql.get_user_categories(user.id)
     text += generate_post_partner(dating_partner, categories=categories)
+    dating_status_boilerplate(user.id)
     is_rejected = sql.get_reject(dating_status[user.id]['last_partner_id'], user.id)
     sql.remove_reject(user.id, dating_status[user.id]['last_partner_id'])
     if not is_rejected:
@@ -521,6 +514,11 @@ async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYP
         dating_user_liked = sql.get_dating_user_by_id(user_id)
         dating_category_liked = sql.get_dating_category_by_user_id(user_id)
         dating_category_liked = [category.name for category in dating_category_liked]
+
+        dating_category_recipient = sql.get_dating_category_by_user_id(user_recipient)
+        dating_category_recipient = [category.name for category in dating_category_recipient]
+
+        categories_merge = list(set(dating_category_liked).intersection(dating_category_recipient))
         menu_liked = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(f"Профиль", url=f"tg://user?id={user_id}")
@@ -532,13 +530,13 @@ async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYP
             await context.bot.send_photo(
                 chat_id=user_recipient,
                 photo=open(storage_location, 'rb'), # TODO fix open to with open()
-                caption="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
+                caption="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, categories_merge),
                 reply_markup=menu_liked
             )
         else:
             await context.bot.send_message(
                 chat_id=user_recipient,
-                text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
+                text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, categories_merge),
                 reply_markup=menu_liked
             )
     query = update.callback_query
