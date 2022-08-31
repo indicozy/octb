@@ -275,7 +275,10 @@ async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     text += "\n\ny/n?"
 
-    await update.message.reply_text(text)
+    await update.message.reply_photo(
+        photo=open(storage_location, 'rb'), # TODO fix open to with open()
+        caption=text,
+    )
 
     return CONFIRMATION
 
@@ -318,9 +321,6 @@ async def show_interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await context.bot.send_message(chat_id=user.id, text="Выберите категории, в которых вы хотите найти партнера и вы можете начать искать партнера", reply_markup=menu)
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    def marketplace_text(name, description, product_type, category):
-        return f"""#{product_type.value.lower()} #{category.lower()} \n{name}\n\n{description}\n\n @{MARKETPLACE_CHAT_ACCOUNT}"""
-
     """Stores the selected gender and asks for a photo."""
     user = update.message.from_user
     user_text = update.message.text
@@ -459,7 +459,17 @@ async def find_next_partner(update, user_id):
             'sleep',
         ],
     ], one_time_keyboard=True)
-    await update.message.reply_text(text, reply_markup=menu)
+
+    storage_folder = f'{STORAGE}/photos/dating/'
+    storage_location = f'{storage_folder}{dating_partner.user_id}.jpg'
+    if dating_partner.has_image:
+        await update.message.reply_photo(
+            photo=open(storage_location, 'rb'), # TODO fix open to with open()
+            caption=text,
+            reply_markup=menu
+        )
+    else:
+        await update.message.reply_text(text, reply_markup=menu)
     return STATUS
 
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -516,8 +526,21 @@ async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYP
                 InlineKeyboardButton(f"Профиль", url=f"tg://user?id={user_id}")
             ],
         ])
-        await context.bot.send_message(chat_id=user_recipient, text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
-                                    reply_markup=menu_liked)
+        storage_folder = f'{STORAGE}/photos/dating/'
+        storage_location = f'{storage_folder}{dating_user_liked.user_id}.jpg'
+        if dating_user_liked.has_image:
+            await context.bot.send_photo(
+                chat_id=user_recipient,
+                photo=open(storage_location, 'rb'), # TODO fix open to with open()
+                caption="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
+                reply_markup=menu_liked
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=user_recipient,
+                text="У вас взаимный лайк!\n\n" + generate_post_partner(dating_user_liked, dating_category_liked),
+                reply_markup=menu_liked
+            )
     query = update.callback_query
     # print("lmao")
 
