@@ -13,7 +13,6 @@ import datetime
 # storage
 import os
 
-# TODO add redis
 dating_preps = {}
 categories = {
     "study_buddy": "Study-buddy",
@@ -49,8 +48,9 @@ async def new_dating_user(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
 
     await update.message.reply_text(
-        "Регистрация на Uni Connect.\n\nКак тебя зовут?"
-        "\nдля отмены регистрации пишите /cancel",
+        "Регистрация на Uni Connect."
+        "\nдля отмены регистрации пишите /cancel."
+        "\n\nКак тебя зовут?" ,
     )
 
     return NAME
@@ -350,7 +350,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         await show_interests(update, context)
         try:
-            dating_preps.pop(user.id) # TODO try except
+            dating_preps.pop(user.id)
         except:
             pass
 
@@ -375,7 +375,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
 
     try:
-        dating_preps.pop(user.id) # TODO try except
+        dating_preps.pop(user.id)
     except:
         pass
 
@@ -428,6 +428,7 @@ async def find_next_partner(update, user_id):
     dating_status_boilerplate(user_id) 
     interests = sql.get_dating_category_by_user_id(user_id)
     interests = [category.name for category in interests]
+    print(interests)
     if not interests:
         await update.message.reply_text("Вы не выбрали категории, для выбора категории, нажмите /connect_categories", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
@@ -636,9 +637,6 @@ add_dating_user = ConversationHandler(
         # CATEGORIES: [MessageHandler(~filters.COMMAND & filters.TEXT, confirmation)],
     fallbacks=[CommandHandler("cancel", cancel)],
 )
-
-# TODO add handlers for reaction
-# TODO add matches and rejects sql
 
 show_interests_handler = CommandHandler("connect_categories", show_interests, filters=filters.ChatType.PRIVATE)
 
