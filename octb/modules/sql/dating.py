@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime, BigInteger, Boolean
+from sqlalchemy import Column, Integer, UnicodeText, String, ForeignKey, UniqueConstraint, func, DateTime, BigInteger, Boolean, or_
 from octb.modules.sql import BASE, SESSION
 
 INSERTION_LOCK = threading.RLock()
@@ -81,6 +81,36 @@ class DatingCategory(BASE):
           return "<DatingCategory {} ({})>".format(self.id, self.name)
 DatingCategory.__table__.create(checkfirst=True)
 
+class DatingMatch(BASE):
+      __tablename__ = "dating_match"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      from_id = Column(BigInteger)
+      to_id = Column(BigInteger)
+
+      def __init__(self, from_id, to_id):
+          self.from_id = from_id
+          self.to_id = to_id
+
+      def __repr__(self):
+          return "<DatingMatch {}>".format(self.id)
+DatingMatch.__table__.create(checkfirst=True)
+
+class DatingReject(BASE):
+      __tablename__ = "dating_reject"
+
+      id = Column(Integer, primary_key=True, autoincrement=True)
+      rejector_id = Column(BigInteger)
+      rejectee_id = Column(BigInteger)
+
+      def __init__(self, rejector_id, rejectee_id):
+          self.rejector_id = rejector_id
+          self.rejectee_id = rejectee_id
+
+      def __repr__(self):
+          return "<DatingMatch {}>".format(self.id)
+DatingReject.__table__.create(checkfirst=True)
+
 def get_dating_category_by_user_id(user_id):
     try:
         return SESSION.query(DatingCategory).where(DatingCategory.user_id == user_id).all()
@@ -104,31 +134,31 @@ def toggle_dating_category(user_id, name):
         SESSION.commit()
         return None
 
-class DatingMatch(BASE):
-      __tablename__ = "dating_match"
+def get_user_categories(user_id):
+    query = SESSION.query(DatingCategory.name)\
+            .where(DatingCategory.user_id == user_id)\
+            .all()
+    SESSION.close()
+    return [x[0] for x in query]
+    
 
-      id = Column(Integer, primary_key=True, autoincrement=True)
-      from_id = Column(BigInteger)
-      to_id = Column(BigInteger)
-
-      def __init__(self, from_id, to_id):
-          self.from_id = from_id
-          self.to_id = to_id
-
-      def __repr__(self):
-          return "<DatingMatch {}>".format(self.id)
-
-class DatingReject(BASE):
-      __tablename__ = "dating_reject"
-
-      id = Column(Integer, primary_key=True, autoincrement=True)
-      rejector_id = Column(BigInteger)
-      rejectee_id = Column(BigInteger)
-
-      def __init__(self, rejector_id, rejectee_id):
-          self.rejector_id = rejector_id
-          self.rejectee_id = rejectee_id
-
-      def __repr__(self):
-          return "<DatingMatch {}>".format(self.id)
-DatingMatch.__table__.create(checkfirst=True)
+def get_potential_partner_by_interest(user_id, user_id_start, interests):
+    try:
+        return SESSION.query(DatingUser, DatingCategory)\
+            .where(DatingUser.user_id > user_id_start)\
+            .where(DatingUser.user_id != user_id)\
+            .where(
+                DatingUser.user_id == DatingCategory.user_id
+            )\
+            .where(DatingCategory.name.in_(interests))\
+            .join(DatingReject, DatingReject.rejectee_id == DatingUser.user_id, isouter=True)\
+            .where(
+                or_(DatingReject.rejector_id != DatingUser.user_id, DatingReject.rejector_id == None)
+            )\
+            .where(
+                or_(DatingReject.rejectee_id != user_id, DatingReject.rejectee_id == None)
+                
+            )\
+            .all()
+    finally:
+        SESSION.close()

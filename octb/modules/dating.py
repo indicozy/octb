@@ -16,7 +16,7 @@ import os
 # TODO add redis
 dating_preps = {}
 categories = {
-    "study-buddy": "Study-buddy",
+    "study_buddy": "Study-buddy",
     "romance": "Романтика",
     "friend": "Друзья",
     "Sport": "Спорт",
@@ -59,10 +59,23 @@ async def name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("name of %s: %s", user.first_name, update.message.text)
     dating_preps[user.id]['name'] = update.message.text
+
+    menu = ReplyKeyboardMarkup([
+        [
+            'Мужчина',
+        ],
+        [
+            'Женщина',
+        ],
+        [
+            'Другое',
+        ],
+    ], one_time_keyboard=True)
     
     await update.message.reply_text(
         "Gender?"
-        "Send /cancel to stop talking to me.\n\n"
+        "Send /cancel to stop talking to me.\n\n",
+        reply_markup=menu
     )
 
     return GENDER
@@ -79,15 +92,40 @@ async def gender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     elif user_text == "другое":
         dating_preps[user.id]['gender'] = None
     else:
+        menu = ReplyKeyboardMarkup([
+            [
+                'Мужчина',
+            ],
+            [
+                'Женщина',
+            ],
+            [
+                'Другое',
+            ],
+        ], one_time_keyboard=True)
         await update.message.reply_text(
             "Gender?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Send /cancel to stop talking to me.\n\n",
+            reply_markup=menu
         )
         return GENDER
+
+    menu = ReplyKeyboardMarkup([
+        [
+            'Мужчины',
+        ],
+        [
+            'Женщины',
+        ],
+        [
+            'Все',
+        ],
+    ], one_time_keyboard=True)
     
     await update.message.reply_text(
         "Gender you like?"
-        "Send /cancel to stop talking to me.\n\n"
+        "Send /cancel to stop talking to me.\n\n",
+        reply_markup=menu
     )
 
     return INTEREST_GENDER
@@ -104,15 +142,34 @@ async def interest_gender(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif user_text == "все":
         dating_preps[user.id]['interest_gender'] = None
     else:
+        menu = ReplyKeyboardMarkup([
+            [
+                'Мужчины',
+            ],
+            [
+                'Женщины',
+            ],
+            [
+                'Все',
+            ],
+        ], one_time_keyboard=True)
         await update.message.reply_text(
             "Gender you like?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Send /cancel to stop talking to me.\n\n",
+            reply_markup=menu
         )
         return INTEREST_GENDER
+
+    menu = ReplyKeyboardMarkup([
+        [
+            'Да', 'Нет'
+        ],
+    ], one_time_keyboard=True)
     
     await update.message.reply_text(
         "Are you in campus?"
-        "Send /cancel to stop talking to me.\n\n"
+        "Send /cancel to stop talking to me.\n\n",
+        reply_markup=menu
     )
 
     return IS_ON_CAMPUS
@@ -140,9 +197,15 @@ async def is_on_campus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         return LOCATION
     else:
+        menu = ReplyKeyboardMarkup([
+            [
+                'Да', 'Нет'
+            ],
+        ], one_time_keyboard=True)
         await update.message.reply_text(
             "Are you in campus?"
-            "Send /cancel to stop talking to me.\n\n"
+            "Send /cancel to stop talking to me.\n\n",
+            reply_markup=menu
         )
         return INTEREST_GENDER
 
@@ -231,6 +294,31 @@ async def skip_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     return CONFIRMATION
 
+async def show_interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.callback_query:
+        query = update.callback_query
+
+        user = update.callback_query.from_user
+        text = query.data
+    else:
+        user = update.message.from_user
+        text = update.message.text
+    user_categories = sql.get_dating_category_by_user_id(user.id)
+
+    # ✅
+    menu_items = []
+    for key, value in categories.items():
+        inserted = False
+        for category in user_categories:
+            if category.name == key and not inserted:
+                inserted = True
+                menu_items.append(InlineKeyboardButton(f"✅{value}", callback_data=f"DATING_CATEGORY_TOGGLE_{key}"))
+        if not inserted:
+            menu_items.append(InlineKeyboardButton(f"{value}", callback_data=f"DATING_CATEGORY_TOGGLE_{key}"))
+            
+    menu = InlineKeyboardMarkup(generate_menu(menu_items))
+    await context.bot.send_message(chat_id=user.id, text="Выберите категории, в которых вы хотите найти партнера и вы можете начать искать партнера", reply_markup=menu)
+
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     def marketplace_text(name, description, product_type, category):
         return f"""#{product_type.value.lower()} #{category.lower()} \n{name}\n\n{description}\n\n @{MARKETPLACE_CHAT_ACCOUNT}"""
@@ -267,21 +355,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         dating_user_new = sql.add_dating_user(user_id, name, gender, interest_gender, location, age, has_image, is_on_campus=is_on_campus, description=description)
 
-        user_categories = sql.get_dating_category_by_user_id(user.id)
-        # ✅
-        menu_items = []
-        for key, value in categories.items():
-            inserted = False
-            for category in user_categories:
-                if category.name == key and not inserted:
-                    inserted = True
-                    menu_items.append(InlineKeyboardButton(f"✅{value}", callback_data=f"DATING_CATEGORY_TOGGLE_{key}"))
-            if not inserted:
-                menu_items.append(InlineKeyboardButton(f"{value}", callback_data=f"DATING_CATEGORY_TOGGLE_{key}"))
-                
-        menu = InlineKeyboardMarkup(generate_menu(menu_items))
-        await update.message.reply_text("Вы добавлены!\nВыберите категории, в которых вы хотите найти партнера", reply_markup=menu)
-        
+        await show_interests(update, context)
         try:
             dating_preps.pop(user.id) # TODO try except
         except:
@@ -339,6 +413,122 @@ async def dating_category_toggle(update: Update, context: ContextTypes.DEFAULT_T
         "Ваши категории:", reply_markup=menu
         )
 
+def get_interests(user_id):
+    if not (user_id in dating_status and 'interests' in dating_status[user_id]):
+        if not dating_status[user_id]:
+            dating_status[user_id] = {}
+        dating_status[user_id]['interests'] = sql.get_user_categories(user_id)
+    return dating_status[user_id]['interests']
+
+def generate_post_partner(dating_partner, categories):
+    return generate_post(f"{dating_partner.name} - {dating_partner.location}", dating_partner.description, categories, args={"Возраст" : dating_partner.age,
+                                                                                                        "Гендер": dating_partner.gender,
+                                                                                                        "Город": dating_partner.location,
+                                                                                                        })
+
+async def find_next_partner(update, user_id):
+    if not (user_id in dating_status and 'last_partner_id' in dating_status[user_id]):
+        dating_status[user_id] = {}
+        dating_status[user_id]['last_partner_id'] = 0
+    dating_user = sql.get_dating_user_by_id(user_id)
+    if not dating_user:
+        await update.message.reply_text("Вы не добавлены в партнеры")
+        return ConversationHandler.END 
+    
+    interests = get_interests(user_id)
+    print(interests)
+    print(user_id)
+    sql_data = sql.get_potential_partner_by_interest(user_id, dating_status[user_id]['last_partner_id'], interests)
+    print(sql_data)
+    if not sql_data:
+        await update.message.reply_text("На сегодня все")
+        return ConversationHandler.END
+    dating_partner = sql_data[0][0]
+    categories = [category.name for _, category in [row for row in sql_data]]
+    categories_merge = list(set(categories).intersection(interests))
+    print(dating_partner)
+    print(categories)
+
+    dating_status[user_id]['last_partner_id'] = dating_partner.user_id
+    text = generate_post_partner(dating_partner, categories_merge)
+    menu = ReplyKeyboardMarkup([
+        [
+            'like',
+        ],
+        [
+            'dislike',
+        ],
+        [
+            'sleep',
+        ],
+    ], one_time_keyboard=True)
+    await update.message.reply_text(text, reply_markup=menu)
+    return STATUS
+
+async def search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    LOGGER.info("User %s did not send image.", user.first_name)
+    response = await find_next_partner(update, user.id)
+    print(response)
+    return response
+
+async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    menu = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(f"like", callback_data=f"DATING_RESPONSE_LIKE_{user.id}"),
+            InlineKeyboardButton(f"dislike", callback_data=f"DATING_RESPONSE_DISLIKE_{user.id}")
+         ],
+    ])
+    
+    LOGGER.info("User %s did not send image.", user.first_name)
+    text = "Кто-то тебя лайкнул!\n\n"
+    dating_partner = sql.get_dating_user_by_id(user.id)
+    categories = sql.get_user_categories(user.id)
+    text += generate_post_partner(dating_partner, categories=categories)
+    await context.bot.send_message(text=text,
+                                   chat_id=dating_status[user.id]['last_partner_id'],
+                                   reply_markup=menu
+                                   )
+    response = await find_next_partner(update, user.id)
+    return response
+
+async def dislike(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    LOGGER.info("User %s did not send image.", user.first_name)
+    response = await find_next_partner(update, user.id)
+    return response
+
+async def sleep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    LOGGER.info("User %s did not send image.", user.first_name)
+    text = "Вы вышли из поисковика"
+    await update.message.reply_text(text)
+    return ConversationHandler.END
+
+STATUS, ENVELOPE = range(2)
+
+search_date = ConversationHandler(
+    entry_points=[
+            CommandHandler("search", search, filters=filters.ChatType.PRIVATE),
+        ],
+    states={
+        STATUS: [
+            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^like$'), like),
+            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^dislike$'), dislike),
+            # MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^✉️$'), envelope),
+            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^sleep$'), sleep),
+            ],
+        # ENVELOPE: [
+        #     MessageHandler(filters.Regex('^Отмена$'), skip_envelope),
+        #     MessageHandler(~filters.COMMAND & filters.TEXT, send_envelope),
+        #     CommandHandler("skip", skip_envelope),
+        #     ],
+    },
+        # CATEGORIES: [MessageHandler(~filters.COMMAND & filters.TEXT, confirmation)],
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
 NAME, GENDER, INTEREST_GENDER, IS_ON_CAMPUS, LOCATION, AGE, DESCRIPTION, IMAGE, CONFIRMATION = range(9)
 
 # main
@@ -382,37 +572,16 @@ add_dating_user = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancel)],
 )
 
-dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
-
-STATUS, ENVELOPE = range(2)
-
-add_dating_user = ConversationHandler(
-    entry_points=[
-            CommandHandler("search", new_dating_user, filters=filters.ChatType.PRIVATE),
-        ],
-    states={
-        STATUS: [
-            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^❤️$'), like),
-            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^👎️$'), dislike),
-            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^✉️$'), envelope),
-            MessageHandler(~filters.COMMAND & filters.TEXT & filters.Regex('^💤️$'), sleep),
-            ],
-        ENVELOPE: [
-            MessageHandler(filters.Regex('^Отмена$'), skip_envelope),
-            MessageHandler(filters.Regex('^Отмена$'), send_envelope),
-            CommandHandler("skip", skip_envelope),
-            ],
-    },
-        # CATEGORIES: [MessageHandler(~filters.COMMAND & filters.TEXT, confirmation)],
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
-
 # TODO add handlers for reaction
 # TODO add matches and rejects sql
+
+show_interests_handler = CommandHandler("interests", show_interests, filters=filters.ChatType.PRIVATE)
+
+dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
 
 dating_category_handlers = [
     dating_category_toggle_handler,
 ]
 
-application.add_handlers([add_dating_user] + dating_category_handlers)
+application.add_handlers([search_date, add_dating_user, show_interests_handler] + dating_category_handlers)
 application.job_queue.run_daily(dating_status_restore, datetime.time(hour=5, minute=0))
