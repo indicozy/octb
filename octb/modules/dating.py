@@ -425,10 +425,13 @@ async def find_next_partner(update, user_id):
     if not dating_user:
         await update.message.reply_text("Вы не зарегистрированы. Для регистрации, нажмите /connect_register.", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END 
+
+    if dating_user.is_archived:
+        sql.activate_user(dating_user.user_id)
+        await update.message.reply_text("Добро пожаловать обратно! Ваш аккаунт снова активен и виден другим пользователям.", reply_markup=ReplyKeyboardRemove())
     dating_status_boilerplate(user_id) 
     interests = sql.get_dating_category_by_user_id(user_id)
     interests = [category.name for category in interests]
-    print(interests)
     if not interests:
         await update.message.reply_text("Вы не выбрали категории, для выбора категории, нажмите /connect_categories", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
@@ -475,7 +478,6 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     response = await find_next_partner(update, user.id)
-    # print(response)
     return response
 
 async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -492,6 +494,7 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     dating_partner = sql.get_dating_user_by_id(user.id)
     categories = sql.get_user_categories(user.id)
     text += generate_post_partner(dating_partner, categories=categories)
+    text += "\n Для деактивации аккаунта, пишите /disconnect"
     dating_status_boilerplate(user.id)
     is_rejected = sql.get_reject(dating_status[user.id]['last_partner_id'], user.id)
     sql.remove_reject(user.id, dating_status[user.id]['last_partner_id'])
@@ -515,6 +518,37 @@ async def sleep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = "Вы вышли из поисковика, на главное меню..."
     await update.message.reply_text(text)
     return ConversationHandler.END
+
+async def archive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    LOGGER.info("User %s did not send image.", user.first_name)
+    sql.archive_user(user.id)
+    await update.message.reply_text("Ваш аккаунт деактивирован и другие пользователи больше вас не видят. Для отмены пишите /connect")
+
+async def about_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
+    dating_user = sql.get_dating_user_by_id(user.id)
+    categories = sql.get_dating_category_by_user_id(user.id)
+    categories = [category.name for category in categories]
+    LOGGER.info("User %s did not send image.", user.first_name)
+    sql.archive_user(user.id)
+    text = "Ваш аккаунт:\n"
+    text += generate_post_partner(dating_user, categories)
+    text += "Для редактирования, пишите /connect_register\n"
+    if dating_user.is_archived:
+        text += "Ваш аккаунт деактивирован и другие пользователи больше вас не видят. Для восстановения пишите /connect"
+    storage_folder = f'{STORAGE}/photos/dating/'
+    storage_location = f'{storage_folder}{user.id}.jpg'
+    if dating_user.has_image:
+        await update.message.reply_photo(
+            chat_id=user.id,
+            photo=open(storage_location, 'rb'), # TODO fix open to with open()
+            caption=text,
+        )
+    else:
+        await update.message.reply_text(
+            text=text,
+        )
 
 async def dating_response_like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     async def send_message_like(user_id, user_recipient):
@@ -639,6 +673,8 @@ add_dating_user = ConversationHandler(
 )
 
 show_interests_handler = CommandHandler("connect_categories", show_interests, filters=filters.ChatType.PRIVATE)
+archive_handler = CommandHandler("disconnect", archive, filters=filters.ChatType.PRIVATE)
+about_me_handler = CommandHandler("connect_me", about_me, filters=filters.ChatType.PRIVATE)
 
 dating_category_toggle_handler = CallbackQueryHandler(dating_category_toggle, pattern="^" + "DATING_CATEGORY_TOGGLE_")
 
@@ -646,5 +682,5 @@ dating_response_like_handler = CallbackQueryHandler(dating_response_like, patter
 dating_response_dislike_handler = CallbackQueryHandler(dating_response_dislike, pattern="^" + "DATING_RESPONSE_DISLIKE_")
 
 
-application.add_handlers([search_date, add_dating_user, show_interests_handler, dating_category_toggle_handler, dating_response_like_handler, dating_response_dislike_handler])
+application.add_handlers([search_date, add_dating_user, show_interests_handler, dating_category_toggle_handler, dating_response_like_handler, dating_response_dislike_handler, archive_handler, about_me_handler])
 application.job_queue.run_daily(dating_status_restore, datetime.time(hour=5, minute=0))

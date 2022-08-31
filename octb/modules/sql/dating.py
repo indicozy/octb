@@ -172,6 +172,9 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
             .where(
                 or_(DatingReject.rejectee_id != user_id, DatingReject.rejectee_id == None)
             )\
+            .where(
+                DatingUser.is_archived != True
+            )\
             .order_by(DatingUser.user_id.asc())\
             .first()
         if partner:
@@ -231,3 +234,23 @@ def count_dating_matches():
     return SESSION.query(DatingMatch.id).count()
   finally:
       SESSION.close()
+      
+def activate_user(user_id):
+    dating_user_obj = SESSION.query(DatingUser)\
+        .where(DatingUser.user_id == user_id)\
+        .first() # TODO try except
+    if dating_user_obj:
+        dating_user_obj.is_archived = False
+        SESSION.add(dating_user_obj)
+        SESSION.commit()
+    return dating_user_obj
+
+def archive_user(user_id):
+    dating_user_obj = SESSION.query(DatingUser)\
+        .where(DatingUser.user_id == user_id)\
+        .first() # TODO try except
+    if dating_user_obj:
+        dating_user_obj.is_archived = True
+        SESSION.add(dating_user_obj)
+        SESSION.commit()
+    return dating_user_obj
