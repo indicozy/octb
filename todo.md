@@ -47,6 +47,7 @@
 - Кластер групп с курьерами...
 - Chegg api
 - [ ] BUG исправить алгоритм на поиск по гендеру
+- [ ] BUG add try except to sending messages if user has banned the app
 
 - Governing
   - [x] Опрос продавцов
