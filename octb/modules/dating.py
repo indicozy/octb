@@ -552,7 +552,6 @@ async def about_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     storage_location = f'{storage_folder}{user.id}.jpg'
     if dating_user.has_image:
         await update.message.reply_photo(
-            chat_id=user.id,
             photo=open(storage_location, 'rb'), # TODO fix open to with open()
             caption=text,
         )
