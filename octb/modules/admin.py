@@ -24,6 +24,8 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     bought_items_count = sql.product.count_product_buyers()
     dating_users_count = sql.dating.count_dating_users()
     dating_matches_count = sql.dating.count_dating_matches()
+    dating_users_males_count = sql.dating.count_dating_users_gender(True)
+    dating_users_females_count = sql.dating.count_dating_users_gender(False)
 
     seller_stats = {}
     seller_names = {}
@@ -42,6 +44,8 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     response += f"Product: {products_count}\n"
     response += f"Bought_items: {bought_items_count}\n"
     response += f"Dating_users: {dating_users_count}\n"
+    response += f"Dating_users_males: {dating_users_males_count}\n"
+    response += f"Dating_users_females: {dating_users_females_count}\n"
     response += f"Dating_matches: {dating_matches_count}\n"
 
     response += "\n\nBest sellers:\n" # TODO not tested

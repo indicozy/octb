@@ -235,6 +235,12 @@ def count_dating_matches():
     return SESSION.query(DatingMatch.id).count()
   finally:
       SESSION.close()
+
+def count_dating_users_gender(is_male):
+  try:
+    return SESSION.query(DatingUser.user_id).where(DatingUser.gender==is_male).count()
+  finally:
+      SESSION.close()
       
 def activate_user(user_id):
     dating_user_obj = SESSION.query(DatingUser)\
