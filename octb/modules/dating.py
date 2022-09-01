@@ -510,10 +510,13 @@ async def like(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     is_rejected = sql.get_reject(dating_status[user.id]['last_partner_id'], user.id)
     sql.remove_reject(user.id, dating_status[user.id]['last_partner_id'])
     if not is_rejected:
-        await context.bot.send_message(text=text,
-                                    chat_id=dating_status[user.id]['last_partner_id'],
-                                    reply_markup=menu
-                                    )
+        try: 
+            await context.bot.send_message(text=text,
+                                        chat_id=dating_status[user.id]['last_partner_id'],
+                                        reply_markup=menu
+                                        )
+        except:
+            sql.archive_user(dating_status[user.id]['last_partner_id'])
     response = await find_next_partner(update, user.id)
     return response
 

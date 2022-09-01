@@ -30,7 +30,6 @@ import os
 def generate_folders():
     def generate_folder(location, folders):
         for key, value in folders.items():
-            print(f"{location}/{key}")
             path = f"{location}/{key}"
             if not os.path.exists(path):
                 os.mkdir(path)

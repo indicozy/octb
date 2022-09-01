@@ -160,12 +160,6 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
             .where(
                 DatingUser.user_id == DatingCategory.user_id
             )\
-            .where(
-                DatingUser.gender == user.interest_gender if user.interest_gender else True # TODO NOT TESTED
-            )\
-            .where(
-                or_(DatingUser.interest_gender == user.gender, DatingUser.interest_gender == None) # TODO NOT TESTED
-            )\
             .where(DatingCategory.name.in_(interests))\
             .where(
                 or_(DatingReject.rejector_id != DatingUser.user_id, DatingReject.rejector_id == None)
@@ -176,6 +170,15 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
             .where(
                 DatingUser.is_archived != True
             )\
+            .where(
+                or_(DatingUser.interest_gender == user.gender, DatingUser.interest_gender == None) # TODO NOT TESTED
+            )
+        if user.interest_gender:
+            partner = partner\
+                .where(
+                    DatingUser.gender == user.interest_gender # TODO NOT TESTED
+                )
+        partner = partner\
             .order_by(DatingUser.user_id.asc())\
             .first()
         if partner:
