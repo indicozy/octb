@@ -53,6 +53,7 @@ def add_dating_user(user_id, name, gender, interest_gender, location, age, has_i
         dating_user_obj.has_image = has_image
         dating_user_obj.is_on_campus = is_on_campus
         dating_user_obj.description = description
+        dating_user_obj.is_archived = False
     else:
         with INSERTION_LOCK:
             dating_user_obj = DatingUser(user_id, name, gender, interest_gender, location, age, has_image, is_on_campus=True, description="")
