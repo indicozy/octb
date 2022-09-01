@@ -45,7 +45,7 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     response += f"Dating_matches: {dating_matches_count}\n"
 
     response += "\n\nBest sellers:\n" # TODO not tested
-    for seller_id, count in seller_stats:
+    for seller_id, count in seller_stats.items():
         if seller_id in seller_names:
             response+= f"{seller_names[seller_id]}: {count}\n"
         else:
