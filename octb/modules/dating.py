@@ -533,7 +533,7 @@ async def sleep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     LOGGER.info("User %s did not send image.", user.first_name)
     text = "Вы вышли из поисковика, на главное меню..."
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 async def archive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

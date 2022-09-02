@@ -32,7 +32,10 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     sales = 0
     product_sold_by_seller = sql.product.get_products_by_seller()
     for seller, product, buyer in product_sold_by_seller:
-        sales += product.price
+        try: 
+            sales += [int(s) for s in product.price.split() if s.isdigit()][0]
+        except:
+            pass
 
         if seller.name and seller.name not in seller_stats:
             seller_names[seller.user_id] = seller.name
