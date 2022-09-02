@@ -29,11 +29,12 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     seller_stats = {}
     seller_names = {}
-    sales = 0
+    sales_arr = []
     product_sold_by_seller = sql.product.get_products_by_seller()
+
     for seller, product, buyer in product_sold_by_seller:
         try: 
-            sales += [int(s) for s in product.price.split() if s.isdigit()][0]
+            sales.append([int(s) for s in product.price.split() if s.isdigit()][0])
         except:
             pass
 
@@ -44,6 +45,9 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
             seller_stats[seller.user_id] = 1
         else:
             seller_stats[seller.user_id] += 1
+    sales = sum(sales_arr)
+
+    print(sales_arr)
 
     response = ""
     response += f"Users: {users_count}\n"
