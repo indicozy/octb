@@ -34,7 +34,7 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     for seller, product, buyer in product_sold_by_seller:
         try: 
-            sales.append([int(s) for s in product.price.split() if s.isdigit()][0])
+            sales_arr.append([int(s) for s in product.price.split() if s.isdigit()][0])
         except:
             pass
 
