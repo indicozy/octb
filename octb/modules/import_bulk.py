@@ -72,7 +72,7 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     products = []
     for i in range(2, m_row + 1):
-        print(i)
+        # print(i)
         if not sheet_obj.cell(row = i, column = 1).value:
             LOGGER.info("id not found, continuing")
             continue
@@ -93,7 +93,7 @@ async def import_bulk(update: Update, context:ContextTypes.DEFAULT_TYPE):
         # Product(name, has_image, description, product_type, price, seller_id, subcategory, message_id)
         category_obj = sql.get_category_by_name(info['category'])
         subcategory_obj = sql.get_subcategory_by_name_and_category_id(info['subcategory'], category_obj.id)
-        print(info['name'], info['subcategory'], category_obj.name, subcategory_obj)
+        # print(info['name'], info['subcategory'], category_obj.name, subcategory_obj)
 
         product = sql.add_product_by_obj(Product(info['name'], has_image, info['description'], sql.ProductTypeEnum(info['product_type']),
                                 info['price'], seller_id, subcategory_obj.id, None))

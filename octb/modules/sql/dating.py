@@ -150,7 +150,7 @@ def get_user_categories(user_id):
     
 
 def get_potential_partner_by_interest(user_id, user_id_start, interests):
-    print(user_id_start, "lol")
+    # print(user_id_start, "lol")
     user = get_dating_user_by_id(user_id)
     try:
         partner =  SESSION.query(DatingUser, DatingCategory)\
@@ -182,10 +182,10 @@ def get_potential_partner_by_interest(user_id, user_id_start, interests):
             .order_by(DatingUser.user_id.asc())\
             .first()
         if partner:
-            print(partner[0].user_id, "lmao")
+            # print(partner[0].user_id, "lmao")
             return partner[0]
         else:
-            print("not found")
+            # print("not found")
             return None
     finally:
         SESSION.close()

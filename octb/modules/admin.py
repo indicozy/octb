@@ -29,8 +29,11 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     seller_stats = {}
     seller_names = {}
+    sales = 0
     product_sold_by_seller = sql.product.get_products_by_seller()
     for seller, product, buyer in product_sold_by_seller:
+        sales += product.price
+
         if seller.name and seller.name not in seller_stats:
             seller_names[seller.user_id] = seller.name
 
@@ -43,6 +46,7 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     response += f"Users: {users_count}\n"
     response += f"Product: {products_count}\n"
     response += f"Bought_items: {bought_items_count}\n"
+    response += f"Sales: {sales}тг\n"
     response += f"Dating_users: {dating_users_count}\n"
     response += f"Dating_users_males: {dating_users_males_count}\n"
     response += f"Dating_users_females: {dating_users_females_count}\n"

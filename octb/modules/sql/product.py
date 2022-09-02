@@ -475,7 +475,7 @@ def add_review(product_id, user_id, points, description=""):
     query = SESSION.query(Review)\
         .where(Review.product_id==product_id)\
         .where(Review.user_id==user_id).all()
-    print(query)
+    # print(query)
     with INSERTION_LOCK:
         if len(query) == 0:
             review = Review(product_id, user_id, points, description=description)
