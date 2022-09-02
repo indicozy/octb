@@ -24,8 +24,10 @@ categories = {
 }
 
 dating_status = {}
-def dating_status_restore():
-    dating_status = {}
+async def dating_status_restore(context):
+    print("DATING STATUS RESTORED")
+    for key, value in dating_status.items():
+        value['last_partner_id'] = 0
 
 def gender_conf(gender):
     if gender == True:
@@ -441,6 +443,7 @@ async def find_next_partner(update, user_id):
         sql.activate_user(dating_user.user_id)
         await update.message.reply_text("Добро пожаловать обратно! Ваш аккаунт снова активен и виден другим пользователям.", reply_markup=ReplyKeyboardRemove())
     dating_status_boilerplate(user_id) 
+    # print(dating_status[user_id]['last_partner_id'], "last")
     interests = sql.get_dating_category_by_user_id(user_id)
     interests = [category.name for category in interests]
     if not interests:
@@ -696,4 +699,5 @@ dating_response_dislike_handler = CallbackQueryHandler(dating_response_dislike, 
 
 
 application.add_handlers([search_date, add_dating_user, show_interests_handler, dating_category_toggle_handler, dating_response_like_handler, dating_response_dislike_handler, archive_handler, about_me_handler])
-application.job_queue.run_daily(dating_status_restore, datetime.time(hour=5, minute=0))
+application.job_queue.run_daily(dating_status_restore, datetime.time(hour=5, minute=0), name="refresh dating history")
+# application.job_queue.run_once(dating_status_restore, 10, name="refresh dating history")
