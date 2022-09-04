@@ -87,7 +87,9 @@ async def subcategory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     subcategory_id = user_text.replace("MARKETPLACE_SUBCATEGORY_", "")
 
     subcategory = sql.get_subcategory_by_id(subcategory_id)
-    products = sql.get_product_sellers_by_subcategory(int(subcategory_id))
+    products_query = sql.get_product_sellers_by_subcategory(int(subcategory_id))
+    products_query.sort(key=lambda a: a[1], reverse=True) # sorts by sales
+    products, _ = zip(*products_query)
     menu = InlineKeyboardMarkup(generate_menu([InlineKeyboardButton(f"{index + 1}",
                                     callback_data="MARKETPLACE_PRODUCT_" + str(product.id)) for product, index in zip(products, range(len(products)))])
                                     + [[InlineKeyboardButton(f"< Назад", callback_data="MARKETPLACE_CATEGORY_" + str(subcategory.category_id))]]

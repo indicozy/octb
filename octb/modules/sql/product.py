@@ -427,15 +427,18 @@ def get_product_by_id(product_id, tg_id):
       SESSION.close()
 
 def get_product_sellers_by_subcategory(subcategory_id):
-    sellers = SESSION.query(Seller).subquery()
-    query = SESSION.query(Product)\
+    query = SESSION.query(Product, func.count(Product_buyer.id))\
             .where(Product.subcategory_id == subcategory_id)\
             .where(Product.is_sold == False)\
             .where(Product.is_archived == False)\
             .where(Product.product_type.in_((ProductTypeEnum.sell.name, ProductTypeEnum.lend.name)))\
             .join(
-                sellers, Product.seller_id == sellers.c.user_id
-            )
+                Seller, Product.seller_id == Seller.user_id
+            )\
+            .join(
+                Product_buyer, Product.id == Product_buyer.product_id, isouter=True
+            )\
+            .group_by(Product)
     return query.all()
 
 def get_product_by_id_no_verify(product_id):
