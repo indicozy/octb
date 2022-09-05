@@ -45,6 +45,7 @@ def generate_folders():
             "temp": {
                 "product": "product",
                 "dating": "dating",
+                "admin": "admin",
             }
         },
     }

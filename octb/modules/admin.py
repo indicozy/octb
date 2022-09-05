@@ -4,9 +4,12 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 import octb.modules.sql as sql
 import asyncio
 
-from octb import application
+from octb import application, LOGGER
 
 __mod_name__ = "admin"
+
+from decouple import config
+STORAGE=config('STORAGE')
 
 from decouple import config
 SUPERADMIN_ID=int(config('SUPERADMIN_ID'))
@@ -69,15 +72,24 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text=response)
 
 async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
-    async def send_message(user_id, text):
+    async def send_message(user_id, text, file=None, is_video=False):
         try: 
-            await context.bot.send_message(chat_id=user_id, text=text)
+            if file and is_video:
+                await context.bot.send_video(video=file, chat_id=user_id, caption=text)
+            elif file and not is_video:
+                await context.bot.send_photo(photo=file, chat_id=user_id, caption=text)
+            else:
+                await context.bot.send_message(chat_id=user_id, text=text)
             return True
-        except:
+        except Exception as e:
+            LOGGER.info(str(e))
             return False
 
     user = update.message.from_user
     user_text = update.message.text
+
+    message_replied = update.message.reply_to_message
+
 
     if user.id != SUPERADMIN_ID:
         await update.message.reply_text("У вас нет прав")
@@ -96,7 +108,20 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
     users = sql.user.get_users_all()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Отправляем сообщение:\n\n{text}\n\n{len(users)} пользователям...")
 
-    is_sent_list = await asyncio.gather(*[send_message(user.user_id, text) for user in users]) # TODO check if it won't break up
+    if message_replied and message_replied.photo:
+        file_id = message_replied.photo[-1].file_id
+        newFile = await context.bot.getFile(file_id)
+        storage_location = f'{STORAGE}/photos/temp/admin/{user.id}.jpg'
+        await newFile.download(storage_location)
+        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text, file=open(storage_location, 'rb')) for user in users]) # TODO check if it won't break up
+    elif message_replied and message_replied.video:
+        file_id = message_replied.video.file_id
+        newFile = await context.bot.getFile(file_id)
+        storage_location = f'{STORAGE}/photos/temp/admin/{user.id}.mp4'
+        await newFile.download(storage_location)
+        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text, file=open(storage_location, 'rb'), is_video=True) for user in users]) # TODO check if it won't break up
+    else:
+        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text) for user in users]) # TODO check if it won't break up
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сообщение отправлено:\n\n{text}\n\n{sum(is_sent_list)} пользователей получили, {len(is_sent_list) - sum(is_sent_list)} пользователей  НЕ получили сообщения")
 
