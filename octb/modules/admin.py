@@ -1,5 +1,6 @@
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, ConversationHandler, MessageHandler
+import time
 
 import octb.modules.sql as sql
 import asyncio
@@ -90,7 +91,6 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     message_replied = update.message.reply_to_message
 
-
     if user.id != SUPERADMIN_ID:
         await update.message.reply_text("У вас нет прав")
         return
@@ -107,7 +107,7 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
     users = sql.user.get_users_all()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Отправляем сообщение:\n\n{text}\n\n{len(users)} пользователям...")
-
+    start_time = time.time()
     if message_replied and message_replied.photo:
         file_id = message_replied.photo[-1].file_id
         newFile = await context.bot.getFile(file_id)
@@ -123,7 +123,7 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
     else:
         is_sent_list = await asyncio.gather(*[send_message(user.user_id, text) for user in users]) # TODO check if it won't break up
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сообщение отправлено:\n\n{text}\n\n{sum(is_sent_list)} пользователей получили, {len(is_sent_list) - sum(is_sent_list)} пользователей  НЕ получили сообщения")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сообщение отправлено:\n\n{text}\n\n{sum(is_sent_list)} пользователей получили, {len(is_sent_list) - sum(is_sent_list)} пользователей  НЕ получили сообщения\n\nОтправлено за {time.time() - start_time} секунд")
 
 # handlers
 sendall_handler = CommandHandler('sendall', sendall, filters=filters.ChatType.PRIVATE)
