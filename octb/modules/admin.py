@@ -51,7 +51,7 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
             seller_stats[seller.user_id] += 1
     sales = sum(sales_arr)
 
-    print(sales_arr)
+    # print(sales_arr)
 
     response = ""
     response += f"Users: {users_count}\n"
