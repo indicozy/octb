@@ -15,6 +15,8 @@ STORAGE=config('STORAGE')
 from decouple import config
 SUPERADMIN_ID=int(config('SUPERADMIN_ID'))
 
+MAX_COROUTINES = 5
+
 async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     user_text = update.message.text
@@ -73,6 +75,13 @@ async def stats(update: Update, context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text=response)
 
 async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    async def gather_with_concurrency(n, *tasks):
+        semaphore = asyncio.Semaphore(n)
+        async def sem_task(task):
+            async with semaphore:
+                return await task
+        return await asyncio.gather(*(sem_task(task) for task in tasks))
+    
     async def send_message(user_id, text, file=None, is_video=False):
         try: 
             if file and is_video:
@@ -104,7 +113,7 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
     if text == "":
         await update.message.reply_text("Нет текста.")
         return
-
+    
     users = sql.user.get_users_all()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Отправляем сообщение:\n\n{text}\n\n{len(users)} пользователям...")
     start_time = time.time()
@@ -113,15 +122,15 @@ async def sendall(update: Update, context:ContextTypes.DEFAULT_TYPE):
         newFile = await context.bot.getFile(file_id)
         storage_location = f'{STORAGE}/photos/temp/admin/{user.id}.jpg'
         await newFile.download(storage_location)
-        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text, file=open(storage_location, 'rb')) for user in users]) # TODO check if it won't break up
+        is_sent_list = await gather_with_concurrency(MAX_COROUTINES, *[send_message(user.user_id, text, file=open(storage_location, 'rb')) for user in users]) # TODO check if it won't break up
     elif message_replied and message_replied.video:
         file_id = message_replied.video.file_id
         newFile = await context.bot.getFile(file_id)
         storage_location = f'{STORAGE}/photos/temp/admin/{user.id}.mp4'
         await newFile.download(storage_location)
-        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text, file=open(storage_location, 'rb'), is_video=True) for user in users]) # TODO check if it won't break up
+        is_sent_list = await gather_with_concurrency(MAX_COROUTINES, *[send_message(user.user_id, text, file=open(storage_location, 'rb'), is_video=True) for user in users]) # TODO check if it won't break up
     else:
-        is_sent_list = await asyncio.gather(*[send_message(user.user_id, text) for user in users]) # TODO check if it won't break up
+        is_sent_list = await gather_with_concurrency(MAX_COROUTINES, *[send_message(user.user_id, text) for user in users]) # TODO check if it won't break up
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Сообщение отправлено:\n\n{text}\n\n{sum(is_sent_list)} пользователей получили, {len(is_sent_list) - sum(is_sent_list)} пользователей  НЕ получили сообщения\n\nОтправлено за {time.time() - start_time} секунд")
 
