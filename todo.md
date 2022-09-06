@@ -48,6 +48,7 @@
 - Chegg api
 - [x] BUG исправить алгоритм на поиск по гендеру
 - [x] BUG add try except to sending messages if user has banned the app
+- [ ] BUG if no items then bot breaks
 
 - Governing
   - [x] Опрос продавцов
