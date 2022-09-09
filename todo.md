@@ -45,7 +45,6 @@
 - сделать рассылку про новый функционал (OLX)!
 
 - Кластер групп с курьерами...
-- Chegg api
 - [x] BUG исправить алгоритм на поиск по гендеру
 - [x] BUG add try except to sending messages if user has banned the app
 - [x] BUG if no items then bot breaks
@@ -56,3 +55,12 @@
   - Стандартизация "стабильных продавцов"...
   - Модерация неприемлимых продуктов...
   - Ежемесячная публичная и приватная статистика...
+
+# Ideas
+- Chegg api
+- Events
+- Wiki
+- Hire of volunteers
+- Academic stuff
+  - Registrar API
+  - Moodle API
